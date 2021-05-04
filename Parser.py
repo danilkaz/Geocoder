@@ -3,43 +3,78 @@ import sqlite3
 
 
 class Parser:
-    def __init__(self):
-        self.connection = sqlite3.connect('Izh.db')
+    def __init__(self, city):
+        self.city = city
+        self.connection = sqlite3.connect(f'{self.city}.db')
         self.cursor = self.connection.cursor()
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS nodes(id INTEGER, lat DOUBLE, lon DOUBLE)")
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS ways(id INTEGER, nodes TEXT)")
         self.nodes_parameters = set()
         self.ways_parameters = set()
         self.indexer_node = 0
         self.indexer_way = 0
+        self.ways = {}
+        self.refs = dict()
 
-    def parse(self, city):
-        tree = xml.etree.ElementTree.iterparse(city)
+    def parse(self):
+        tree = xml.etree.ElementTree.iterparse(self.city)
+        self.get_tables(self.city)
         for event, elem in tree:
             if elem.tag == 'node':
                 self.parse_node(elem)
             elif elem.tag == 'way':
                 self.parse_way(elem)
             elif elem.tag == 'relation':
-                pass
-                #self.parse_relation(elem)
-            else:
-                continue
+                if len(self.ways) > 0:
+                    self.insert_ways_to_base()
+                self.parse_relation(elem)
         self.connection.commit()
         self.connection.close()
+
+    def get_tables(self, city):
+        node_tags = set()
+        way_tags = set()
+        tree = xml.etree.ElementTree.iterparse(city)
+        for event, elem in tree:
+            if elem.tag == 'node':
+                for tag in list(elem):
+                    key = self.replace_service_words(tag.attrib['k'])
+                    node_tags.add(key)
+            elif elem.tag == 'way':
+                for child in list(elem)[::-1]:
+                    if child.tag == 'tag':
+                        key = self.replace_service_words(child.attrib['k'])
+                        way_tags.add(key)
+                    else:
+                        break
+            elif elem.tag == 'relation':
+                for child in list(elem)[::-1]:
+                    if child.tag == 'tag' and self.is_building(list(elem)[::-1]):
+                        key = self.replace_service_words(child.attrib['k'])
+                        way_tags.add(key)
+                    else:
+                        break
+
+        str_node = ""
+        for tag in node_tags:
+            str_node += f', {tag} TEXT'
+        str_way = ""
+        for tag in way_tags:
+            str_way += f', {tag} TEXT'
+        self.cursor.execute(f'CREATE TABLE IF NOT EXISTS nodes(id INTEGER, lat DOUBLE, lon DOUBLE{str_node})')
+        self.cursor.execute(f'CREATE TABLE IF NOT EXISTS ways(id INTEGER, nodes TEXT{str_way})')
 
     def parse_node(self, elem):
         tags = list(elem)
         attr = elem.attrib
         keys = ['id', 'lat', 'lon']
         values = [attr['id'], attr['lat'], attr['lon']]
-        print("node", self.indexer_node)
-        self.indexer_node += 1
+
+        #print('node', self.indexer_node)
+        #self.indexer_node += 1
+
         for tag in tags:
             key = self.replace_service_words(tag.attrib['k'])
             value = tag.attrib['v']
-            if key not in self.nodes_parameters:
-                self.add_column('nodes', key, self.nodes_parameters)
+
             keys.append(key)
             values.append(value)
         self.insert_row('nodes', keys, values)
@@ -49,81 +84,130 @@ class Parser:
         attr = elem.attrib
         keys = ['id']
         values = [attr['id']]
-        print('way', self.indexer_way)
-        self.indexer_way += 1
-        if not self.is_building(children):
-            return
-        refs = []
+
+        # print('way', self.indexer_way)
+        # self.indexer_way += 1
+
+        #if is_highway():
+         #   return
+
+        nodes_count = 0
         for child in children:
             if child.tag == 'nd':
                 ref = child.attrib['ref']
-                refs.append(ref)
+                if ref not in self.refs:
+                    self.refs[ref] =set()
+                self.refs[ref].add(attr['id'])
+                nodes_count += 1
             elif child.tag == 'tag':
                 key = self.replace_service_words(child.attrib['k'])
                 value = child.attrib['v']
-                if key not in self.ways_parameters:
-                    self.add_column('ways', key, self.ways_parameters)
+
                 keys.append(key)
                 values.append(value)
-        self.cursor.execute(f"SELECT lat, lon FROM nodes WHERE id IN {'('+ ', '.join(refs) + ')'}")
-        coordinates = str(self.cursor.fetchall())
-        keys = keys[:1] + ['nodes'] + keys[2:]
-        coordinates = ' '.join(coordinates)
-        values = values[:1] + [coordinates] + values[2:]
-        self.insert_row('ways', keys, values)
+        self.ways[attr['id']] = (set(), keys, values)
+
+        if len(self.ways) > 3000:
+            self.insert_ways_to_base()
+
+    def insert_ways_to_base(self):
+        self.cursor.execute(f"SELECT id, lat, lon FROM nodes WHERE id IN {'(' + ', '.join(self.refs.keys()) + ')'}")
+        coordinates = self.cursor.fetchall()
+
+        print(len(coordinates))
+
+        for coord in coordinates:
+            ids = self.refs[str(coord[0])]
+
+
+            for id in ids:
+                self.ways[id][0].add((coord[1], coord[2]))
+                # if coord[0] == 1337298929:
+                    # print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                    # print(self.refs[str(coord[0])])
+                    # print(self.ways[id])
+
+        for way in self.ways.values():
+            keys = way[1]
+            values = way[2]
+            keys = keys[:1] + ['nodes'] + keys[2:]
+            values = values[:1] + [str(way[0])] + values[2:]
+            self.insert_row('ways', keys, values)
+        self.ways = {}
+        self.refs = dict()
 
     def parse_relation(self, elem):
         children = list(elem)[::-1]
-        attr = elem.attrib
-
         keys = ['id']
-        values = [attr['id']]
-
+        values = [elem.attrib['id']]
         if not self.is_building(children):
             return
+        print('-------------')
+        print(elem.attrib)
+        points = set()
 
         for child in children:
-            if child.tag == 'member':
+            if child.tag == 'tag':
+                key = self.replace_service_words(child.attrib['k'])
+                value = child.attrib['v']
+                keys.append(key)
+                values.append(value)
+            elif child.tag == 'member':
                 type = child.attrib['type']
                 ref = child.attrib['ref']
-                if type == 'way':
-                    pass
-                else:
-                    pass
-            else:
-                pass
+                print(ref)
+                if type == 'node':
+                    self.cursor.execute(f'SELECT lat, lon FROM nodes WHERE id IN ({ref})')
+                    node_coord = self.cursor.fetchone()[0]
+                    points.add(str(tuple(node_coord)))
+                elif type == 'way':
+                    self.cursor.execute(f'SELECT nodes FROM ways WHERE id IN ({ref})')
+                    a = self.cursor.fetchone()
+                    print(a)
+                    nodes = a[0][1:-1].split('), (')
+                    nodes[0] = nodes[0][1:]
+                    nodes[-1] = nodes[-1][:-1]
 
-    def add_column(self, table, key, parameters):
-        parameters.add(key)
-        self.cursor.execute(f'ALTER TABLE {table} ADD COLUMN {key} TEXT')
+                    for node in nodes:
+                        points.add('(' + node + ')')
+        keys = keys[:1] + ['nodes'] + keys[2:]
+        values = values[:1] + [str(points)] + values[2:]
+        self.insert_row('ways', keys, values)
+
+
+
+
+    # def insert_row(self, table, keys, values):
+    #     question_marks = '?' + ', ?' * (len(values) - 1)
+    #     self.cursor.execute(f"INSERT INTO {table} {question_marks} VALUES ({question_marks})", tuple(keys + values))
+
 
     def insert_row(self, table, keys, values):
         keys = '(' + ', '.join(keys) + ')'
         values_to_question_marks = '?' + ', ?' * (len(values) - 1)
         self.cursor.execute(f"INSERT INTO {table} {keys} VALUES ({values_to_question_marks})", tuple(values))
 
-    def select_row(self, table, *args):
-        pass
+    @staticmethod
+    def replace_service_words(string):
+        string = string.lower()
+        characters = {':': 'COLON', '.': 'DOT', '-': 'MINUS', 'index': 'post_index'}
+        for character in characters.keys():
+            string = string.replace(character, characters[character])
+        return string
 
     @staticmethod
     def is_building(children):
         for child in children:
             if child.tag == 'tag':
-                if 'highway' in child.attrib['k']:
-                    return False
-                elif 'addr:street' in child.attrib['k']:
+                # if 'highway' in child.attrib['k']:
+                #     return False
+                if 'addr:street' in child.attrib['k']:
                     return True
         return False
 
-    @staticmethod
-    def replace_service_words(string):
-        string = string.lower()
-        characters = {':': 'COLON', '.': 'DOT', 'index': 'post_index'}
-        for character in characters.keys():
-            string = string.replace(character, characters[character])
-        return string
 
 
-if '__main__' == __name__:
-    parser = Parser()
-    parser.parse('Izhevsk')
+
+if __name__ == "__main__":
+    parser = Parser('Izhevsk')
+    parser.parse()
