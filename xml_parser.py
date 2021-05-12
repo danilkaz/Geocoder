@@ -1,21 +1,23 @@
 import xml.etree.ElementTree
 import sqlite3
+import os
 
 
 class Parser:
     def __init__(self, city: str) -> None:
-        self.city = city
-        self.connection = sqlite3.connect(f'{self.city}.db')
+        self.city = city + '.xml'
+        self.connection = sqlite3.connect(os.path.join('db', f'{self.city[:-4]}.db'))
         self.cursor = self.connection.cursor()
+        self.tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
         self.nodes_parameters = set()
         self.ways_parameters = set()
         self.ways = {}
         self.refs = dict()
 
     def parse(self) -> None:
-        tree = xml.etree.ElementTree.iterparse(self.city)
+
         self.get_tables()
-        for event, elem in tree:
+        for event, elem in self.tree:
             if elem.tag == 'node':
                 self.parse_node(elem)
             elif elem.tag == 'way':
@@ -30,8 +32,7 @@ class Parser:
     def get_tables(self) -> None:
         node_tags = set()
         way_tags = set()
-        tree = xml.etree.ElementTree.iterparse(self.city)
-        for event, elem in tree:
+        for event, elem in self.tree:
             if elem.tag == 'node':
                 for tag in list(elem):
                     key = tag.attrib['k'].lower()
@@ -166,5 +167,5 @@ class Parser:
 
 
 if __name__ == '__main__':
-    parser = Parser('Izhevsk')
+    parser = Parser('Первоуральск')
     parser.parse()
