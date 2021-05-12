@@ -7,9 +7,8 @@ class Parser:
     def __init__(self, city: str) -> None:
         self.city = city + '.xml'
         self.connection = sqlite3.connect(os.path.join('db', f'{self.city[:-4]}.db'))
+        #TODO: прикрутить LOWER
         self.cursor = self.connection.cursor()
-        #print()
-        #print(os.path.join('Geocoder', 'db', f'{self.city[:-4]}.db'))
         self.nodes_parameters = set()
         self.ways_parameters = set()
         self.ways = {}

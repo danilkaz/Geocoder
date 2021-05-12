@@ -4,8 +4,14 @@ import sqlite3
 import json
 import os
 
+
 def main():
-    #TODO: написать создание папок db, xml, json
+    if not is_directory_exist('xml', os.path.curdir):
+        os.mkdir('xml')
+    if not is_directory_exist('db', os.path.curdir):
+        os.mkdir('db')
+    if not is_directory_exist('json', os.path.curdir):
+        os.mkdir('json')
 
     argparser = argparse.ArgumentParser('Simple Geocoding')
 
@@ -17,8 +23,8 @@ def main():
 
     args = argparser.parse_args()
 
-    if not file_is_exist(f'{args.city}.db', os.path.join('db')):
-        if not file_is_exist(f'{args.city}.xml', os.path.join('xml')):
+    if not is_file_exist(f'{args.city}.db', os.path.join('db')):
+        if not is_file_exist(f'{args.city}.xml', os.path.join('xml')):
             pass
             #TODO обратиться к базе
         else:
@@ -43,9 +49,16 @@ def main():
                 print(f'{key} : {value}')
 
 
-def file_is_exist(file_name, path):
+def is_file_exist(file_name, path):
     for root, dirs, files in os.walk(path):
         if file_name in files:
+            return True
+    return False
+
+
+def is_directory_exist(directory_name, path):
+    for root, dirs, files in os.walk(path):
+        if directory_name in dirs:
             return True
     return False
 
@@ -63,7 +76,8 @@ def get_average_point(points):
 def do_geocoding(cursor, street, house_number):
     cursor.execute(f"SELECT * FROM ways "
                    f"WHERE ([addr:street] LIKE '%{street.lower()}%') "
-                   f"AND ([addr:housenumber] LIKE '%{house_number.lower()}%')")
+                   f"AND ([addr:housenumber] = '{house_number.lower()}')")
+    #TODO: добавить нормальное сравнение номера дома
     info = cursor.fetchall()
     if len(info) == 0:
         print('Данный адрес не найден. Проверьте правильность ввода.')
@@ -77,15 +91,15 @@ def do_geocoding(cursor, street, house_number):
 
     nodes = get_nodes(info)
     points = list(map(lambda p: p.split(', '), nodes))
-    average_node = get_average_point(points)
+    average_point = get_average_point(points)
 
-    cursor.execute(f"""PRAGMA table_info('ways')""")
+    cursor.execute(f"PRAGMA table_info('ways')")
     columns = list(map(lambda t: t[1], cursor.fetchall()))
     for tup in zip(columns, info):
         if tup[1] is not None and tup[0] != 'nodes':
             new_info[str(tup[0])] = str(tup[1])
-    new_info['coordinates'] = average_node
-    new_info['nodes'] = points
+    new_info['coordinates'] = average_point
+    new_info['nodes'] = list(map(tuple, points))
 
     return new_info
 
