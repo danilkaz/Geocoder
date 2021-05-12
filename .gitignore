@@ -127,7 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.idea
 
-Izhevsk
-Izhevsk.db
-Ekb
+xml
+db
+json

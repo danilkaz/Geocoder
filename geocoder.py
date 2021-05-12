@@ -1,78 +1,102 @@
-import Parser
+from xml_parser import Parser
+from geocoder_exceptions import NothingFoundError, TooManyFoundError
 import argparse
 import sqlite3
-
-
-class Geocoder:
-    pass
+import json
+import os
 
 
 def main():
-    # parser = argparse.ArgumentParser()
-    street = 'беРЕговая'.lower()
-    house_number = '2'.lower()
+    argparser = argparse.ArgumentParser('Simple Geocoding')
 
-    connection = sqlite3.connect('Izhevsk.db')
-    cursor = connection.cursor()
+    argparser.add_argument('-r', '--reverse', action='store_true', help="use reverse geocoding")
+    argparser.add_argument('city', type=str, help='Enter city')
+    argparser.add_argument('street', type=str, help='Enter street name')
+    argparser.add_argument('house_number', type=str, help='Enter house number')
+    argparser.add_argument('-j', '--json', action='store_true', help="output into .json file")
+
+    args = argparser.parse_args()
+
+    if not file_is_exist(f'{args.city}.db', os.path.join('db')):
+        if not file_is_exist(f'{args.city}.xml', os.path.join('xml')):
+            pass
+            #TODO обратиться к базе
+        else:
+            parser = Parser(args.city)
+            parser.parse()
+
+    conn = sqlite3.connect(os.path.join('db', f'{args.city}.db'))
+    cursor = conn.cursor()
+
+    if args.reverse:
+        pass
+    else:
+        info = do_geocoding(cursor, args.street, args.house_number)
+
+        if args.json:
+            file_name = f'{args.city}_{args.street}_{args.house_number}.json'
+            with open(os.path.join('json', file_name), 'w', encoding='utf-8') as fp:
+                json.dump(info, fp, ensure_ascii=False)
+            print(f'Файл сохранен в папку json с именем "{file_name}"')
+        else:
+            for key, value in info.items():
+                print(f'{key} : {value}')
+
+
+def file_is_exist(file_name, path):
+    for root, dirs, files in os.walk(path):
+        if file_name in files:
+            return True
+    return False
+
+
+def get_average_point(points):
+    x = 0
+    y = 0
+    for point in points:
+        point[0], point[1] = float(point[0]), float(point[1])
+        x += point[0]
+        y += point[1]
+    return round(x / len(points), 7), round(y / len(points), 7)
+
+
+def do_geocoding(cursor, street, house_number):
+    cursor.execute(f"SELECT * FROM ways "
+                   f"WHERE ([addr:street] LIKE '%{street.lower()}%') "
+                   f"AND ([addr:housenumber] LIKE '%{house_number.lower()}%')")
+    info = cursor.fetchall()
+    if len(info) == 0:
+        print('Данный адрес не найден. Проверьте правильность ввода.')
+        exit(1)
+    if len(info) > 1:
+        print('Найдено больше одного адреса. Уточните запрос.')
+        exit(2)
+    info = info[0]
+
+    new_info = dict()
+
+    nodes = get_nodes(info)
+    points = list(map(lambda p: p.split(', '), nodes))
+    average_node = get_average_point(points)
+
     cursor.execute(f"""PRAGMA table_info('ways')""")
     columns = list(map(lambda t: t[1], cursor.fetchall()))
-    cursor.execute(f"""SELECT * FROM ways WHERE ([addr:street] LIKE '%{street}%') AND ([addr:housenumber] LIKE '%{house_number}%')""")
-    #cursor.execute(f"""SELECT [addr:street], [addr:housenumber] FROM ways""")
-    a = cursor.fetchall()
-    print(a)
-    a = a[0]
-    nodes = a[1][1:-1].split('), (')
+    for tup in zip(columns, info):
+        if tup[1] is not None and tup[0] != 'nodes':
+            new_info[str(tup[0])] = str(tup[1])
+    new_info['coordinates'] = average_node
+    new_info['nodes'] = points
+
+    return new_info
+
+
+def get_nodes(info):
+    nodes = info[1][1:-1].split('), (')
     nodes[0] = nodes[0][1:]
     nodes[-1] = nodes[-1][:-1]
-
-    pairs = map(lambda p: p.split(', '), nodes)
-    x = 0
-    y = 0
-    n = 0
-    # print(n)
-    for pair in pairs:
-        pair[0], pair[1] = float(pair[0]), float(pair[1])
-        x += pair[0]
-        y += pair[1]
-        n += 1
-    print(round(x / n, 7), round(y / n, 7))
-    for tup in zip(columns, a):
-        if tup[1] is not None:
-            print(tup[0], tup[1])
-    # parser.add_argument("-a", "--address", help="blabla", action="store_true")
-
-    # args = parser.parse_args()
-    # print(args.address)
-
-
-def argparse_main():
-    parser = argparse.ArgumentParser('Simple Geocoding')
-
-    parser.add_argument('street', type=str, help='Enter street name')
-    parser.add_argument('house_number', type=str, help='Enter house number')
-
-    args = parser.parse_args()
-
-    conn = sqlite3.connect('Izhevsk.db')
-    cursor = conn.cursor()
-    cursor.execute(f"""SELECT * FROM ways WHERE ([addr:street] LIKE '%{args.street}%') AND ([addr:housenumber] LIKE '%{args.house_number}%')""")
-    a = cursor.fetchall()[0]
-    nodes = a[1][1:-1].split('), (')
-    nodes[0] = nodes[0][1:]
-    nodes[-1] = nodes[-1][:-1]
-
-    pairs = map(lambda p: p.split(', '), nodes)
-    x = 0
-    y = 0
-    n = 0
-    # print(n)
-    for pair in pairs:
-        pair[0], pair[1] = float(pair[0]), float(pair[1])
-        x += pair[0]
-        y += pair[1]
-        n += 1
-    print(round(x / n, 7), round(y / n, 7))
+    return nodes
 
 
 if __name__ == '__main__':
-    argparse_main()
+    main()
+

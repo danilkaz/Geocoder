@@ -8,16 +8,18 @@ class Parser:
         self.city = city + '.xml'
         self.connection = sqlite3.connect(os.path.join('db', f'{self.city[:-4]}.db'))
         self.cursor = self.connection.cursor()
-        self.tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
+        #print()
+        #print(os.path.join('Geocoder', 'db', f'{self.city[:-4]}.db'))
         self.nodes_parameters = set()
         self.ways_parameters = set()
         self.ways = {}
         self.refs = dict()
+        self.is_parsed = False
 
     def parse(self) -> None:
-
         self.get_tables()
-        for event, elem in self.tree:
+        tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
+        for event, elem in tree:
             if elem.tag == 'node':
                 self.parse_node(elem)
             elif elem.tag == 'way':
@@ -28,11 +30,13 @@ class Parser:
                 self.parse_relation(elem)
         self.connection.commit()
         self.connection.close()
+        self.is_parsed = True
 
     def get_tables(self) -> None:
         node_tags = set()
         way_tags = set()
-        for event, elem in self.tree:
+        tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
+        for event, elem in tree:
             if elem.tag == 'node':
                 for tag in list(elem):
                     key = tag.attrib['k'].lower()
