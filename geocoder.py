@@ -1,12 +1,12 @@
 from xml_parser import Parser
-from geocoder_exceptions import NothingFoundError, TooManyFoundError
 import argparse
 import sqlite3
 import json
 import os
 
-
 def main():
+    #TODO: написать создание папок db, xml, json
+
     argparser = argparse.ArgumentParser('Simple Geocoding')
 
     argparser.add_argument('-r', '--reverse', action='store_true', help="use reverse geocoding")
