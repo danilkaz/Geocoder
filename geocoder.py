@@ -28,8 +28,9 @@ def main():
         parser = Parser(args.city)
         parser.parse()
 
-    conn = sqlite3.connect(os.path.join('db', f'{args.city}.db'))
-    cursor = conn.cursor()
+    connection = sqlite3.connect(os.path.join('db', f'{args.city}.db'))
+    connection.create_function('LOWER', 1, sqlite_lower)
+    cursor = connection.cursor()
 
     if args.reverse:
         pass
@@ -37,6 +38,7 @@ def main():
         info = do_geocoding(cursor, args.street, args.house_number)
 
         if args.json:
+            #TODO поменять args на элементы словаря
             file_name = f'{args.city}_{args.street}_{args.house_number}.json'
             with open(os.path.join('json', file_name), 'w', encoding='utf-8') as fp:
                 json.dump(info, fp, ensure_ascii=False)
@@ -44,6 +46,10 @@ def main():
         else:
             for key, value in info.items():
                 print(f'{key} : {value}')
+
+
+def sqlite_lower(string):
+    return str(string).lower()
 
 
 def is_file_exist(file_name, path):
@@ -72,8 +78,8 @@ def get_average_point(points):
 
 def do_geocoding(cursor, street, house_number):
     cursor.execute(f"SELECT * FROM ways "
-                   f"WHERE ([addr:street] LIKE '%{street.lower()}%') "
-                   f"AND ([addr:housenumber] = '{house_number.lower()}')")
+                   f"WHERE (LOWER([addr:street]) LIKE '%{street.lower()}%') "
+                   f"AND (LOWER([addr:housenumber]) = '{house_number.lower()}')")
     #TODO: добавить нормальное сравнение номера дома
     info = cursor.fetchall()
     if len(info) == 0:
@@ -114,7 +120,6 @@ def download_city_xml(city):
     north = round(coordinates[1], 4)
     west = round(coordinates[2], 4)
     east = round(coordinates[3], 4)
-    print(south, north, west, east)
     url = f"https://overpass-api.de/api/map?bbox={west},{south},{east},{north}"
     response = requests.get(url, stream=True)
     with open(os.path.join('xml', f"{city}.xml"), 'wb') as f:

@@ -73,7 +73,7 @@ class Parser:
         values = [attr['id'], attr['lat'], attr['lon']]
         for tag in tags:
             key = tag.attrib['k'].lower()
-            value = tag.attrib['v'].lower()
+            value = tag.attrib['v']
             keys.append(key)
             values.append(value)
         self.insert_row('nodes', keys, values)
@@ -93,7 +93,7 @@ class Parser:
                 nodes_count += 1
             elif child.tag == 'tag':
                 key = child.attrib['k'].lower()
-                value = child.attrib['v'].lower()
+                value = child.attrib['v']
                 keys.append(key)
                 values.append(value)
         self.ways[attr['id']] = (set(), keys, values)
@@ -128,7 +128,7 @@ class Parser:
         for child in children:
             if child.tag == 'tag':
                 key = child.attrib['k'].lower()
-                value = child.attrib['v'].lower()
+                value = child.attrib['v']
                 keys.append(key)
                 values.append(value)
             elif child.tag == 'member':
