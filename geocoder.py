@@ -49,6 +49,7 @@ def main():
 
 
 def sqlite_lower(string):
+    #TODO пробелы и дефисы
     return str(string).lower()
 
 
@@ -87,6 +88,7 @@ def do_geocoding(cursor, street, house_number):
         exit(1)
     if len(info) > 1:
         print('Найдено больше одного адреса. Уточните запрос.')
+        #TODO выводить че есть
         exit(2)
     info = info[0]
 
