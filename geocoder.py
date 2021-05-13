@@ -3,13 +3,12 @@ import argparse
 import sqlite3
 import json
 import os
+import requests
 
 
 def main():
     if not is_directory_exist('xml', os.path.curdir):
         os.mkdir('xml')
-    if not is_directory_exist('db', os.path.curdir):
-        os.mkdir('db')
     if not is_directory_exist('json', os.path.curdir):
         os.mkdir('json')
 
@@ -25,11 +24,9 @@ def main():
 
     if not is_file_exist(f'{args.city}.db', os.path.join('db')):
         if not is_file_exist(f'{args.city}.xml', os.path.join('xml')):
-            pass
-            #TODO обратиться к базе
-        else:
-            parser = Parser(args.city)
-            parser.parse()
+            download_city_xml(args.city)
+        parser = Parser(args.city)
+        parser.parse()
 
     conn = sqlite3.connect(os.path.join('db', f'{args.city}.db'))
     cursor = conn.cursor()
@@ -109,6 +106,37 @@ def get_nodes(info):
     nodes[0] = nodes[0][1:]
     nodes[-1] = nodes[-1][:-1]
     return nodes
+
+
+def download_city_xml(city):
+    coordinates = get_city_coordinates(city)
+    south = round(coordinates[0], 4)
+    north = round(coordinates[1], 4)
+    west = round(coordinates[2], 4)
+    east = round(coordinates[3], 4)
+    print(south, north, west, east)
+    url = f"https://overpass-api.de/api/map?bbox={west},{south},{east},{north}"
+    response = requests.get(url, stream=True)
+    with open(os.path.join('xml', f"{city}.xml"), 'wb') as f:
+        for chunk in response.iter_content(chunk_size=10 * 1024 * 1024):
+            if chunk:
+                f.write(chunk)
+
+
+def get_city_coordinates(city):
+    connection = sqlite3.connect(os.path.join('db', 'cities.db'))
+    cursor = connection.cursor()
+    cursor.execute(f"SELECT south, north, west, east FROM cities WHERE name IN ('{city}')")
+    result = cursor.fetchall()
+    if len(result) == 0:
+        print('Такого города в базе нет.')
+        exit(3)
+    if len(result) > 1:
+        print('Нашлось больше одного города с таким названием. Уточните запрос.')
+        exit(4)
+    coordinates = result[0]
+    connection.close()
+    return coordinates
 
 
 if __name__ == '__main__':

@@ -161,14 +161,9 @@ class Parser:
                             tuple(values))
 
     @staticmethod
-    def is_building(children):
-        for child in children:
+    def is_building(elem):
+        for child in elem:
             if child.tag == 'tag' and \
                     'addr:street' in child.attrib['k']:
                 return True
         return False
-
-
-if __name__ == '__main__':
-    parser = Parser('Первоуральск')
-    parser.parse()
