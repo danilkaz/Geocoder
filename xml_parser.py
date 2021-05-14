@@ -1,24 +1,27 @@
 import xml.etree.ElementTree
 import sqlite3
 import os
+from tqdm import tqdm
 
 
 class Parser:
     def __init__(self, city: str) -> None:
         self.city = city + '.xml'
         self.connection = sqlite3.connect(os.path.join('db', f'{self.city[:-4]}.db'))
-        #TODO: прикрутить LOWER
         self.cursor = self.connection.cursor()
         self.nodes_parameters = set()
         self.ways_parameters = set()
         self.ways = {}
         self.refs = dict()
         self.is_parsed = False
+        self.rows_count = 0
 
     def parse(self) -> None:
         self.get_tables()
         tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
+        bar = tqdm(total=self.rows_count, desc="Формирование базы", ncols=100)
         for event, elem in tree:
+            bar.update(1)
             if elem.tag == 'node':
                 self.parse_node(elem)
             elif elem.tag == 'way':
@@ -30,12 +33,15 @@ class Parser:
         self.connection.commit()
         self.connection.close()
         self.is_parsed = True
+        bar.close()
 
     def get_tables(self) -> None:
         node_tags = set()
         way_tags = set()
         tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
+        self.rows_count = 0
         for event, elem in tree:
+            self.rows_count += 1
             if elem.tag == 'node':
                 for tag in list(elem):
                     key = tag.attrib['k'].lower()
