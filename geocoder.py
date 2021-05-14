@@ -103,9 +103,8 @@ def do_geocoding(cursor, street, house_number):
     for tup in zip(columns, info):
         if tup[1] is not None and tup[0] != 'nodes':
             new_info[str(tup[0])] = str(tup[1])
-    new_info['coordinates'] = average_point
     new_info['nodes'] = list(map(tuple, points))
-
+    new_info['coordinates'] = average_point
     return new_info
 
 
