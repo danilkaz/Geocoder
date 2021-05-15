@@ -147,7 +147,9 @@ def download_city_xml(city):
     west = round(coordinates[2], 4)
     east = round(coordinates[3], 4)
     url = f"https://overpass-api.de/api/map?bbox={west},{south},{east},{north}"
+    print('Делаем запрос')
     response = requests.get(url, stream=True)
+    print('Ответ получен. Скачиваем файл')
     bar = tqdm(desc='Скачано уже', unit='B', unit_scale=True)
     with open(os.path.join('xml', f"{city}.xml"), 'wb') as f:
         for chunk in response.iter_content(chunk_size=10 * 1024 * 1024):

@@ -13,7 +13,6 @@ class Parser:
         self.ways_parameters = set()
         self.ways = {}
         self.refs = dict()
-        self.is_parsed = False
         self.rows_count = 0
 
     def parse(self) -> None:
@@ -32,7 +31,6 @@ class Parser:
                 self.parse_relation(elem)
         self.connection.commit()
         self.connection.close()
-        self.is_parsed = True
         bar.close()
 
     def get_tables(self) -> None:

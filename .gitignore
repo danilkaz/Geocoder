@@ -131,3 +131,5 @@ dmypy.json
 
 xml
 json
+db
+!db/cities.db
