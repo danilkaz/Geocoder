@@ -125,11 +125,13 @@ class Parser:
         for way in self.ways.values():
             keys = way[1]
             values = way[2]
-            keys = keys[:1] + ['nodes'] + keys[2:]
-            values = values[:1] + [str(way[0])] + values[2:]
+            print(1, keys, values)
+            keys = keys[:1] + ['nodes'] + keys[1:]
+            values = values[:1] + [str(way[0])] + values[1:]
+            print(2, keys, values)
             self.insert_row('ways', keys, values)
         self.ways = {}
-        self.refs = dict()
+        self.refs = {}
 
     def parse_relation(self, elem) -> None:
         children = list(elem)[::-1]

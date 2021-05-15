@@ -20,7 +20,7 @@ def main():
     argparser.add_argument('street', type=str, help='Название улицы, проспекта и т.д')
     argparser.add_argument('house_number', type=str, help='Номер дома')
     argparser.add_argument('-j', '--json', action='store_true', help="Вывод в файл .json")
-    argparser.add_argument('-a', '--additional', action='store_true', help="Получить дополнительную информации о зданни")
+    argparser.add_argument('-a', '--additional', action='store_true', help="Получить дополнительную информации о здании")
 
     args = argparser.parse_args()
 
