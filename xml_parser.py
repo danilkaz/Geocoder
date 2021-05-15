@@ -9,8 +9,6 @@ class Parser:
         self.city = city + '.xml'
         self.connection = sqlite3.connect(os.path.join('db', f'{self.city[:-4]}.db'))
         self.cursor = self.connection.cursor()
-        self.nodes_parameters = set()
-        self.ways_parameters = set()
         self.ways = {}
         self.refs = dict()
         self.rows_count = 0
@@ -23,12 +21,16 @@ class Parser:
             bar.update(1)
             if elem.tag == 'node':
                 self.parse_node(elem)
+                elem.clear()
             elif elem.tag == 'way':
                 self.parse_way(elem)
+                elem.clear()
             elif elem.tag == 'relation':
                 if len(self.ways) > 0:
                     self.insert_ways_to_base()
                 self.parse_relation(elem)
+                elem.clear()
+        del tree
         self.connection.commit()
         self.connection.close()
         bar.close()
@@ -43,22 +45,29 @@ class Parser:
             if elem.tag == 'node':
                 for tag in list(elem):
                     key = tag.attrib['k'].lower()
-                    node_tags.add(key)
+                    if key not in ['id', 'lat', 'lon']:
+                        node_tags.add(key)
+                elem.clear()
             elif elem.tag == 'way':
                 for child in list(elem)[::-1]:
                     if child.tag == 'tag':
                         key = child.attrib['k'].lower()
-                        way_tags.add(key)
+                        if key not in ['id', 'nodes']:
+                            way_tags.add(key)
                     else:
                         break
+                elem.clear()
             elif elem.tag == 'relation':
                 for child in list(elem)[::-1]:
                     if child.tag == 'tag' \
                             and self.is_building(list(elem)[::-1]):
                         key = child.attrib['k'].lower()
-                        way_tags.add(key)
+                        if key not in ['id', 'nodes']:
+                            way_tags.add(key)
                     else:
                         break
+                elem.clear()
+        del tree
         str_node = ""
         for tag in node_tags:
             str_node += f', [{tag}] TEXT'
@@ -101,7 +110,7 @@ class Parser:
                 keys.append(key)
                 values.append(value)
         self.ways[attr['id']] = (set(), keys, values)
-        if len(self.ways) > 3000:
+        if len(self.ways) > 30000:
             self.insert_ways_to_base()
 
     def insert_ways_to_base(self) -> None:
