@@ -10,8 +10,11 @@ class Parser:
         self.connection = sqlite3.connect(os.path.join('db', f'{self.city[:-4]}.db'))
         self.cursor = self.connection.cursor()
         self.ways = {}
-        self.refs = dict()
+        self.refs_ways = {}
         self.rows_count = 0
+
+        self.relations = {}
+        self.refs_rel = {}
 
     def parse(self) -> None:
         self.get_tables()
@@ -30,6 +33,8 @@ class Parser:
                     self.insert_ways_to_base()
                 self.parse_relation(elem)
                 elem.clear()
+        if len(self.relations) > 0:
+            self.insert_relations_to_base()
         del tree
         self.connection.commit()
         self.connection.close()
@@ -100,9 +105,9 @@ class Parser:
         for child in children:
             if child.tag == 'nd':
                 ref = child.attrib['ref']
-                if ref not in self.refs:
-                    self.refs[ref] = set()
-                self.refs[ref].add(attr['id'])
+                if ref not in self.refs_ways:
+                    self.refs_ways[ref] = set()
+                self.refs_ways[ref].add(attr['id'])
                 nodes_count += 1
             elif child.tag == 'tag':
                 key = child.attrib['k'].lower()
@@ -110,36 +115,35 @@ class Parser:
                 keys.append(key)
                 values.append(value)
         self.ways[attr['id']] = (set(), keys, values)
-        if len(self.ways) > 30000:
+        if len(self.ways) > 50000:
             self.insert_ways_to_base()
 
     def insert_ways_to_base(self) -> None:
         self.cursor.execute(f"SELECT id, lat, lon FROM nodes "
                             f"WHERE id IN "
-                            f"{'(' + ', '.join(self.refs.keys()) + ')'}")
+                            f"{'(' + ', '.join(self.refs_ways.keys()) + ')'}")
         coordinates = self.cursor.fetchall()
         for coord in coordinates:
-            ids = self.refs[str(coord[0])]
+            ids = self.refs_ways[str(coord[0])]
             for id in ids:
                 self.ways[id][0].add((coord[1], coord[2]))
         for way in self.ways.values():
             keys = way[1]
             values = way[2]
-            print(1, keys, values)
             keys = keys[:1] + ['nodes'] + keys[1:]
             values = values[:1] + [str(way[0])] + values[1:]
-            print(2, keys, values)
             self.insert_row('ways', keys, values)
         self.ways = {}
-        self.refs = {}
+        self.refs_ways = {}
 
     def parse_relation(self, elem) -> None:
         children = list(elem)[::-1]
+        attr = elem.attrib
         keys = ['id']
-        values = [elem.attrib['id']]
+        values = [attr['id']]
+        count = 0
         if not self.is_building(children):
             return
-        points = set()
         for child in children:
             if child.tag == 'tag':
                 key = child.attrib['k'].lower()
@@ -147,25 +151,48 @@ class Parser:
                 keys.append(key)
                 values.append(value)
             elif child.tag == 'member':
-                type = child.attrib['type']
                 ref = child.attrib['ref']
-                if type == 'node':
-                    self.cursor.execute(f"SELECT lat, lon FROM nodes "
-                                        f"WHERE id IN ({ref})")
-                    node_coord = self.cursor.fetchone()[0]
-                    points.add(str(tuple(node_coord)))
-                elif type == 'way':
-                    self.cursor.execute(f"SELECT nodes FROM ways "
-                                        f"WHERE id IN ({ref})")
-                    a = self.cursor.fetchone()
-                    nodes = a[0][1:-1].split('), (')
-                    nodes[0] = nodes[0][1:]
-                    nodes[-1] = nodes[-1][:-1]
-                    for node in nodes:
-                        points.add('(' + node + ')')
-        keys = keys[:1] + ['nodes'] + keys[2:]
-        values = values[:1] + [str(points)] + values[2:]
-        self.insert_row('ways', keys, values)
+                count += 1
+                if ref not in self.refs_rel:
+                    self.refs_rel[ref] = set()
+                self.refs_rel[ref].add(attr['id'])
+
+        self.relations[attr['id']] = (set(), keys, values)
+        if len(self.relations) > 50000:
+            self.insert_relations_to_base()
+
+    def insert_relations_to_base(self):
+        self.cursor.execute(f"SELECT id, lat, lon FROM nodes "
+                            f"WHERE id IN "
+                            f"{'(' + ', '.join(self.refs_rel.keys()) + ')'}")
+        nodes = self.cursor.fetchall()
+        for node in nodes:
+            ids = self.refs_rel[str(node[0])]
+            for id in ids:
+                self.relations[id][0].add( (node[1], node[2]) )
+        self.cursor.execute(f"SELECT id, nodes FROM ways "
+                            f"WHERE id IN "
+                            f"{'(' + ', '.join(self.refs_rel.keys()) + ')'}")
+        ways = self.cursor.fetchall()
+        for way in ways:
+            ids = self.refs_rel[str(way[0])]
+            for id in ids:
+                nodes = way[1][1:-1].split('), (')
+                nodes[0] = nodes[0][1:]
+                nodes[-1] = nodes[-1][:-1]
+                #
+                for node in nodes:
+                    node = node.split(', ')
+                    self.relations[id][0].add((float(node[0]), float(node[1])))
+
+        for relation in self.relations.values():
+            keys = relation[1]
+            values = relation[2]
+            keys = keys[:1] + ['nodes'] + keys[1:]
+            values = values[:1] + [str(relation[0])] + values[1:]
+            self.insert_row('ways', keys, values)
+        self.relations = {}
+        self.refs_rel = {}
 
     def insert_row(self, table: str, keys: list, values: list) -> None:
         keys = map(lambda x: f'[{x}]', keys)
