@@ -218,8 +218,6 @@ def get_city_coordinates(city):
     return coordinates
 
 
-
-
 if __name__ == '__main__':
     main()
 

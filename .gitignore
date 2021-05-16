@@ -5,3 +5,5 @@
 !xml_parser.py
 !requirements.txt
 !README.md
+!reverse_geocoder.py
+!test.py
