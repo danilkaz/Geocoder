@@ -1,4 +1,5 @@
 from xml_parser import Parser
+import reverse_geocoder
 import argparse
 import sqlite3
 import json
@@ -15,32 +16,48 @@ def main():
 
     argparser = argparse.ArgumentParser('Геокодер')
 
-    argparser.add_argument('-r', '--reverse', action='store_true', help="Использовать для обратного геокодинга")
-    argparser.add_argument('city', type=str, help='Название города')
-    argparser.add_argument('street', type=str, help='Название улицы, проспекта и т.д')
-    argparser.add_argument('house_number', type=str, help='Номер дома')
+    reverse_group = argparser.add_mutually_exclusive_group()
+    reverse_group.add_argument('-r', '--reverse', nargs=2, type=str, required=False,
+                               metavar=('lat', 'lon'), help='Используйте для обратного геокодинга')
+    group = argparser.add_mutually_exclusive_group()
+    group.add_argument('-g', '--geocoder', nargs=3, type=str, required=False,
+                       metavar=('city', 'street', 'house_number'), help='Используйте для прямого геокодинга')
     argparser.add_argument('-j', '--json', action='store_true', help="Вывод в файл .json")
     argparser.add_argument('-a', '--additional', action='store_true', help="Получить дополнительную информации о здании")
 
     args = argparser.parse_args()
 
-    args.city = args.city.title()
-
-    if not is_file_exist(f'{args.city}.db', os.path.join('db')):
-        if not is_file_exist(f'{args.city}.xml', os.path.join('xml')):
-            download_city_xml(args.city)
-        parser = Parser(args.city)
-        parser.parse()
-
-    connection = sqlite3.connect(os.path.join('db', f'{args.city}.db'))
-    connection.create_function('NORMALIZE', 1, normalize_string_sqlite)
-    cursor = connection.cursor()
+    if args.reverse and args.geocoder:
+        print('Неверный запрос')
+        exit(5)
 
     if args.reverse:
-        pass
+        lat = float(args.reverse[0])
+        lon = float(args.reverse[1])
+
+    if args.geocoder:
+        parsed_city = args.geocoder[0].title()
+        parsed_street = args.geocoder[1]
+        parsed_house_number = args.geocoder[2]
+
+    if args.reverse:
+        print(lat, lon)
+        city = find_city(lat, lon)
+        print(city)
+
+        get_base(city)
+
+        reverse_geocoder.get_objects(lat, lon, city)
+
     else:
-        info = do_geocoding(cursor, args.street, args.house_number)
-        city = args.city
+        get_base(parsed_city)
+
+        connection = sqlite3.connect(os.path.join('db', f'{parsed_city}.db'))
+        connection.create_function('NORMALIZE', 1, normalize_string_sqlite)
+        cursor = connection.cursor()
+
+        info = do_geocoding(cursor, parsed_street, parsed_house_number)
+        city = parsed_city
         street = info['addr:street']
         house_number = info['addr:housenumber']
         coordinates = info['coordinates']
@@ -61,6 +78,30 @@ def main():
                 for key, value in info.items():
                     if key not in ['addr:city' ,'addr:street', 'addr:housenumber', 'coordinates']:
                         print(f'{key} : {value}')
+
+
+def get_base(city):
+    if not is_file_exist(f'{city}.db', os.path.join('db')):
+        if not is_file_exist(f'{city}.xml', os.path.join('xml')):
+            download_city_xml(city)
+        parser = Parser(city)
+        parser.parse()
+
+
+def find_city(lat, lon):
+    connection = sqlite3.connect(os.path.join('db', 'cities.db'))
+    cursor = connection.cursor()
+
+    cursor.execute(f"SELECT name FROM cities WHERE ({lat} BETWEEN south AND north) AND ({lon} BETWEEN west AND east)")
+    info = cursor.fetchall()
+    if len(info) == 0:
+        print('Данная точка не находится в городе')
+        exit(6)
+    elif len(info) > 1:
+        print('Точка лежит в пересечении городов')
+        exit(7)
+        #TODO подумать как исправить
+    return info[0][0]
 
 
 def normalize_string_sqlite(string):
@@ -134,7 +175,7 @@ def do_geocoding(cursor, street, house_number):
 
 
 def get_nodes(info):
-    nodes = info['nodes'][1:-1].split('), (')
+    nodes = info['nodes'][1:-1].split('], [')
     nodes[0] = nodes[0][1:]
     nodes[-1] = nodes[-1][:-1]
     return nodes
@@ -175,6 +216,8 @@ def get_city_coordinates(city):
     coordinates = result[0]
     connection.close()
     return coordinates
+
+
 
 
 if __name__ == '__main__':

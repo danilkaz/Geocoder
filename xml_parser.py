@@ -19,16 +19,18 @@ class Parser:
     def parse(self) -> None:
         self.get_tables()
         tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
-        bar = tqdm(total=self.rows_count, desc="Формирование базы", ncols=100)
+        bar = tqdm(total=self.rows_count, desc="Формирование базы - nodes", ncols=100)
         for event, elem in tree:
             bar.update(1)
             if elem.tag == 'node':
                 self.parse_node(elem)
                 elem.clear()
             elif elem.tag == 'way':
+                bar.set_description("Формирование базы - ways", refresh=True)
                 self.parse_way(elem)
                 elem.clear()
             elif elem.tag == 'relation':
+                bar.set_description("Формирование базы - relations", refresh=True)
                 if len(self.ways) > 0:
                     self.insert_ways_to_base()
                 self.parse_relation(elem)
@@ -82,7 +84,7 @@ class Parser:
         self.cursor.execute(f"CREATE TABLE IF NOT EXISTS nodes "
                             f"(id INTEGER, lat DOUBLE, lon DOUBLE{str_node})")
         self.cursor.execute(f"CREATE TABLE IF NOT EXISTS ways"
-                            f"(id INTEGER, nodes TEXT{str_way})")
+                            f"(id INTEGER, nodes TEXT, coordinateX DOUBLE, coordinateY DOUBLE{str_way})")
 
     def parse_node(self, elem) -> None:
         tags = list(elem)
@@ -114,7 +116,7 @@ class Parser:
                 value = child.attrib['v']
                 keys.append(key)
                 values.append(value)
-        self.ways[attr['id']] = (set(), keys, values)
+        self.ways[attr['id']] = ([], keys, values)
         if len(self.ways) > 50000:
             self.insert_ways_to_base()
 
@@ -126,15 +128,27 @@ class Parser:
         for coord in coordinates:
             ids = self.refs_ways[str(coord[0])]
             for id in ids:
-                self.ways[id][0].add((coord[1], coord[2]))
+                self.ways[id][0].append([coord[1], coord[2]])
         for way in self.ways.values():
             keys = way[1]
             values = way[2]
-            keys = keys[:1] + ['nodes'] + keys[1:]
-            values = values[:1] + [str(way[0])] + values[1:]
+            aver_point = self.get_average_point(way[0])
+
+            keys = keys[:1] + ['nodes', 'coordinateX', 'coordinateY'] + keys[1:]
+            values = values[:1] + [str(way[0]), aver_point[0], aver_point[1]] + values[1:]
             self.insert_row('ways', keys, values)
+
         self.ways = {}
         self.refs_ways = {}
+
+    def get_average_point(self, points):
+        x = 0
+        y = 0
+        for point in points:
+            point[0], point[1] = float(point[0]), float(point[1])
+            x += point[0]
+            y += point[1]
+        return round(x / len(points), 7), round(y / len(points), 7)
 
     def parse_relation(self, elem) -> None:
         children = list(elem)[::-1]
@@ -157,7 +171,7 @@ class Parser:
                     self.refs_rel[ref] = set()
                 self.refs_rel[ref].add(attr['id'])
 
-        self.relations[attr['id']] = (set(), keys, values)
+        self.relations[attr['id']] = ([], keys, values)
         if len(self.relations) > 50000:
             self.insert_relations_to_base()
 
@@ -169,7 +183,7 @@ class Parser:
         for node in nodes:
             ids = self.refs_rel[str(node[0])]
             for id in ids:
-                self.relations[id][0].add( (node[1], node[2]) )
+                self.relations[id][0].append( (node[1], node[2]) )
         self.cursor.execute(f"SELECT id, nodes FROM ways "
                             f"WHERE id IN "
                             f"{'(' + ', '.join(self.refs_rel.keys()) + ')'}")
@@ -177,13 +191,13 @@ class Parser:
         for way in ways:
             ids = self.refs_rel[str(way[0])]
             for id in ids:
-                nodes = way[1][1:-1].split('), (')
+                nodes = way[1][1:-1].split('], [')
                 nodes[0] = nodes[0][1:]
                 nodes[-1] = nodes[-1][:-1]
                 #
                 for node in nodes:
                     node = node.split(', ')
-                    self.relations[id][0].add((float(node[0]), float(node[1])))
+                    self.relations[id][0].append((float(node[0]), float(node[1])))
 
         for relation in self.relations.values():
             keys = relation[1]
