@@ -19,18 +19,16 @@ class Parser:
     def parse(self) -> None:
         self.get_tables()
         tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
-        bar = tqdm(total=self.rows_count, desc="Формирование базы - nodes", ncols=100)
+        bar = tqdm(total=self.rows_count, desc="Формирование базы", ncols=100)
         for event, elem in tree:
             bar.update(1)
             if elem.tag == 'node':
                 self.parse_node(elem)
                 elem.clear()
             elif elem.tag == 'way':
-                bar.set_description("Формирование базы - ways", refresh=True)
                 self.parse_way(elem)
                 elem.clear()
             elif elem.tag == 'relation':
-                bar.set_description("Формирование базы - relations", refresh=True)
                 if len(self.ways) > 0:
                     self.insert_ways_to_base()
                 self.parse_relation(elem)
@@ -117,7 +115,8 @@ class Parser:
                 keys.append(key)
                 values.append(value)
         self.ways[attr['id']] = ([], keys, values)
-        if len(self.ways) > 50000:
+        #TODO не добавлять inner
+        if len(self.ways) > 100000:
             self.insert_ways_to_base()
 
     def insert_ways_to_base(self) -> None:
@@ -152,6 +151,7 @@ class Parser:
 
     def parse_relation(self, elem) -> None:
         children = list(elem)[::-1]
+        #TODO исправить [::-1]
         attr = elem.attrib
         keys = ['id']
         values = [attr['id']]
@@ -172,7 +172,15 @@ class Parser:
                 self.refs_rel[ref].add(attr['id'])
 
         self.relations[attr['id']] = ([], keys, values)
-        if len(self.relations) > 50000:
+        #TODO добавить среднюю точку для relation
+        #TODO подумать как парсить школы, детские сады и пр.
+        #TODO подумать что делать когда одно здание пожирает другое
+        #TODO бинпоиск
+        #TODO ашан на боровой проверить углы(геокодер не определяет здание)
+        #TODO некоторые организации не точки, а линии
+        #TODO теги организаций - shop, amenity, и еще чето
+        #TODO парсить nodes сразу много
+        if len(self.relations) > 100000:
             self.insert_relations_to_base()
 
     def insert_relations_to_base(self):
@@ -194,7 +202,6 @@ class Parser:
                 nodes = way[1][1:-1].split('], [')
                 nodes[0] = nodes[0][1:]
                 nodes[-1] = nodes[-1][:-1]
-                #
                 for node in nodes:
                     node = node.split(', ')
                     self.relations[id][0].append((float(node[0]), float(node[1])))

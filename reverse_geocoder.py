@@ -62,7 +62,3 @@ def dot(point1, point2):
 
 def cross(point1, point2):
     return point1[0] * point2[1] - point1[1] * point2[0]
-
-polygon = [(56.8552892, 53.1985857), (56.8553002, 53.1987764), (56.856239, 53.1984278), (56.8562485, 53.1986188) ]
-point = (56.855593, 53.198688)
-print(is_point_in_polygon(point, polygon))

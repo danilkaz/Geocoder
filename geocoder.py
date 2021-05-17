@@ -36,14 +36,13 @@ def main():
         lon = float(args.reverse[1])
 
     if args.geocoder:
+        #TODO исправить city
         parsed_city = args.geocoder[0].title()
         parsed_street = args.geocoder[1]
         parsed_house_number = args.geocoder[2]
 
     if args.reverse:
-        print(lat, lon)
         city = find_city(lat, lon)
-        print(city)
 
         get_base(city)
 
