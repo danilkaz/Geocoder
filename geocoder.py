@@ -17,13 +17,15 @@ def main():
     argparser = argparse.ArgumentParser('Геокодер')
 
     reverse_group = argparser.add_mutually_exclusive_group()
-    reverse_group.add_argument('-r', '--reverse', nargs=2, type=str, required=False,
+    #TODO перевести ошибки на русский(если возможно)
+    reverse_group.add_argument('-r', '--reverse', nargs=2, type=float, required=False,
                                metavar=('lat', 'lon'), help='Используйте для обратного геокодинга')
     group = argparser.add_mutually_exclusive_group()
     group.add_argument('-g', '--geocoder', nargs=3, type=str, required=False,
                        metavar=('city', 'street', 'house_number'), help='Используйте для прямого геокодинга')
-    argparser.add_argument('-j', '--json', action='store_true', help="Вывод в файл .json")
-    argparser.add_argument('-a', '--additional', action='store_true', help="Получить дополнительную информации о здании")
+    argparser.add_argument('-j', '--json', action='store_true', help='Вывод в файл .json')
+    argparser.add_argument('-a', '--additional', action='store_true', help='Получить дополнительную информации о здании')
+    argparser.add_argument('-o', '--organizations', action='store_true', help='Дополнительно вывести все организации в здании')
 
     args = argparser.parse_args()
 
@@ -36,8 +38,7 @@ def main():
         lon = float(args.reverse[1])
 
     if args.geocoder:
-        #TODO исправить city
-        parsed_city = args.geocoder[0].title()
+        parsed_city = args.geocoder[0]
         parsed_street = args.geocoder[1]
         parsed_house_number = args.geocoder[2]
 
@@ -46,20 +47,52 @@ def main():
 
         get_base(city)
 
-        reverse_geocoder.get_objects(lat, lon, city)
+        reverse_geocoder.get_objects_binsearch(lat, lon, city)
 
     else:
-        get_base(parsed_city)
+        city_conn = sqlite3.connect(os.path.join('db', 'cities.db'))
+        city_conn.create_function('NORMALIZE', 1, normalize_string_sqlite)
+        city_cursor = city_conn.cursor()
+        city_cursor.execute(f"SELECT name FROM cities "
+                       f"WHERE NORMALIZE(name) IN ('{normalize_string_sqlite(parsed_city)}')")
+        city = city_cursor.fetchall()[0][0]
+        #TODO: обработать исключение: город не найден
+        city_conn.close()
 
-        connection = sqlite3.connect(os.path.join('db', f'{parsed_city}.db'))
+        print(city)
+
+        get_base(city)
+
+        connection = sqlite3.connect(os.path.join('db', f'{city}.db'))
         connection.create_function('NORMALIZE', 1, normalize_string_sqlite)
         cursor = connection.cursor()
 
         info = do_geocoding(cursor, parsed_street, parsed_house_number)
-        city = parsed_city
+
         street = info['addr:street']
         house_number = info['addr:housenumber']
         coordinates = info['coordinates']
+
+        if args.organizations:
+            south, north = coordinates[0] - 0.0025, coordinates[0] + 0.0025
+            west, east = coordinates[1] - 0.0025, coordinates[1] + 0.0025
+
+            cursor.execute(
+                f"SELECT id, name, shop, amenity FROM nodes WHERE (lat BETWEEN {south} AND {north}) AND"
+                f"(lon BETWEEN {west} AND {east}) AND (NOT(name IS NULL) OR NOT(shop IS NULL) OR NOT(amenity IS NULL))")
+            #TODO не забыть про ways/relations
+            organizations = cursor.fetchall()
+            if len(organizations) == 0:
+                print("Организаций нет")
+            else:
+                for organization in organizations:
+                    if organization[1] is not None:
+                        print(organization[1], end=' ')
+                    if organization[2] is not None:
+                        print(organization[2], end=' ')
+                    if organization[3] is not None:
+                        print(organization[3], end=' ')
+                    print()
 
         if args.json:
             street = street.replace(' ', '_')

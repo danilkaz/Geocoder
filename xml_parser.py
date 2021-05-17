@@ -54,23 +54,19 @@ class Parser:
                         node_tags.add(key)
                 elem.clear()
             elif elem.tag == 'way':
-                for child in list(elem)[::-1]:
+                for child in list(elem):
                     if child.tag == 'tag':
                         key = child.attrib['k'].lower()
                         if key not in ['id', 'nodes']:
                             way_tags.add(key)
-                    else:
-                        break
                 elem.clear()
             elif elem.tag == 'relation':
-                for child in list(elem)[::-1]:
-                    if child.tag == 'tag' \
-                            and self.is_building(list(elem)[::-1]):
+                is_building = self.is_building(list(elem))
+                for child in list(elem):
+                    if child.tag == 'tag' and is_building:
                         key = child.attrib['k'].lower()
                         if key not in ['id', 'nodes']:
                             way_tags.add(key)
-                    else:
-                        break
                 elem.clear()
         del tree
         str_node = ""
@@ -97,7 +93,7 @@ class Parser:
         self.insert_row('nodes', keys, values)
 
     def parse_way(self, elem) -> None:
-        children = list(elem)[::-1]
+        children = list(elem)
         attr = elem.attrib
         keys = ['id']
         values = [attr['id']]
@@ -115,7 +111,6 @@ class Parser:
                 keys.append(key)
                 values.append(value)
         self.ways[attr['id']] = ([], keys, values)
-        #TODO не добавлять inner
         if len(self.ways) > 100000:
             self.insert_ways_to_base()
 
@@ -132,7 +127,8 @@ class Parser:
             keys = way[1]
             values = way[2]
             aver_point = self.get_average_point(way[0])
-
+            if aver_point is None:
+                continue
             keys = keys[:1] + ['nodes', 'coordinateX', 'coordinateY'] + keys[1:]
             values = values[:1] + [str(way[0]), aver_point[0], aver_point[1]] + values[1:]
             self.insert_row('ways', keys, values)
@@ -143,6 +139,8 @@ class Parser:
     def get_average_point(self, points):
         x = 0
         y = 0
+        if len(points) == 0:
+            return None
         for point in points:
             point[0], point[1] = float(point[0]), float(point[1])
             x += point[0]
@@ -150,8 +148,7 @@ class Parser:
         return round(x / len(points), 7), round(y / len(points), 7)
 
     def parse_relation(self, elem) -> None:
-        children = list(elem)[::-1]
-        #TODO исправить [::-1]
+        children = list(elem)
         attr = elem.attrib
         keys = ['id']
         values = [attr['id']]
@@ -164,7 +161,7 @@ class Parser:
                 value = child.attrib['v']
                 keys.append(key)
                 values.append(value)
-            elif child.tag == 'member':
+            elif child.tag == 'member' and child.attrib['role'] != 'inner':
                 ref = child.attrib['ref']
                 count += 1
                 if ref not in self.refs_rel:
@@ -172,11 +169,8 @@ class Parser:
                 self.refs_rel[ref].add(attr['id'])
 
         self.relations[attr['id']] = ([], keys, values)
-        #TODO добавить среднюю точку для relation
         #TODO подумать как парсить школы, детские сады и пр.
         #TODO подумать что делать когда одно здание пожирает другое
-        #TODO бинпоиск
-        #TODO ашан на боровой проверить углы(геокодер не определяет здание)
         #TODO некоторые организации не точки, а линии
         #TODO теги организаций - shop, amenity, и еще чето
         #TODO парсить nodes сразу много
@@ -191,7 +185,7 @@ class Parser:
         for node in nodes:
             ids = self.refs_rel[str(node[0])]
             for id in ids:
-                self.relations[id][0].append( (node[1], node[2]) )
+                self.relations[id][0].append([node[1], node[2]])
         self.cursor.execute(f"SELECT id, nodes FROM ways "
                             f"WHERE id IN "
                             f"{'(' + ', '.join(self.refs_rel.keys()) + ')'}")
@@ -204,13 +198,20 @@ class Parser:
                 nodes[-1] = nodes[-1][:-1]
                 for node in nodes:
                     node = node.split(', ')
-                    self.relations[id][0].append((float(node[0]), float(node[1])))
+                    self.relations[id][0].append([float(node[0]), float(node[1])])
 
         for relation in self.relations.values():
             keys = relation[1]
             values = relation[2]
-            keys = keys[:1] + ['nodes'] + keys[1:]
-            values = values[:1] + [str(relation[0])] + values[1:]
+
+            aver_point = self.get_average_point(relation[0])
+
+            if aver_point is None:
+                continue
+
+            keys = keys[:1] + ['nodes', 'coordinateX', 'coordinateY'] + keys[1:]
+            values = values[:1] + [str(relation[0]), aver_point[0], aver_point[1]] + values[1:]
+
             self.insert_row('ways', keys, values)
         self.relations = {}
         self.refs_rel = {}

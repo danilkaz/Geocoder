@@ -3,6 +3,31 @@ import sqlite3
 import os
 
 
+def get_objects_binsearch(lat, lon, city):
+    connection = sqlite3.connect(os.path.join('db', f"{city}.db"))
+    cursor = connection.cursor()
+
+    left_border = 0.0001
+    right_border = 0.002
+    while abs(left_border - right_border) > 0.000001:
+        middle = (left_border + right_border) / 2
+        #print(middle)
+        south, north = lat - middle, lat + middle
+        west, east = lon - middle, lon + middle
+
+        cursor.execute( f"SELECT id, nodes, [addr:street], [addr:housenumber] FROM ways WHERE ([coordinateX] BETWEEN {south} AND {north}) AND"
+                        f"([coordinateY] BETWEEN {west} AND {east}) AND NOT([addr:street] IS NULL) AND NOT(nodes IS null) AND "
+                        f"NOT([addr:housenumber] IS NULL)")
+        info = cursor.fetchall()
+        if len(info) == 1:
+            print(info[0][2], info[0][3])
+            break
+        elif len(info) > 1:
+            right_border = middle
+        else:
+            left_border = middle
+
+
 def get_objects(lat, lon, city):
     connection = sqlite3.connect(os.path.join('db', f"{city}.db"))
     cursor = connection.cursor()
