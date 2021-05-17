@@ -20,8 +20,8 @@ def get_objects_binsearch(lat, lon, city):
                         f"NOT([addr:housenumber] IS NULL)")
         info = cursor.fetchall()
         if len(info) == 1:
-            print(info[0][2], info[0][3])
-            break
+            #print(info[0][2], info[0][3])
+            return info[0][2], info[0][3]
         elif len(info) > 1:
             right_border = middle
         else:
@@ -76,7 +76,7 @@ def is_point_in_polygon(point, polygon):
         side1 = (polygon[i][0] - point[0], polygon[i][1] - point[1])
         side2 = (polygon[(i + 1) % n][0] - point[0], polygon[(i + 1) % n][1] - point[1])
         angle += math.atan2(cross(side1, side2), dot(side1, side2))
-    if abs(abs(angle) - 2 * math.pi) < 0.01:
+    if abs(abs(angle) - 2 * math.pi) < 0.1:
         return True
     return False
 

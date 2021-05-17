@@ -18,6 +18,7 @@ def main():
 
     reverse_group = argparser.add_mutually_exclusive_group()
     #TODO перевести ошибки на русский(если возможно)
+    #TODO дополнительный аргумент для ситуаций с совпадениями
     reverse_group.add_argument('-r', '--reverse', nargs=2, type=float, required=False,
                                metavar=('lat', 'lon'), help='Используйте для обратного геокодинга')
     group = argparser.add_mutually_exclusive_group()
@@ -59,12 +60,11 @@ def main():
         #TODO: обработать исключение: город не найден
         city_conn.close()
 
-        print(city)
-
         get_base(city)
 
         connection = sqlite3.connect(os.path.join('db', f'{city}.db'))
         connection.create_function('NORMALIZE', 1, normalize_string_sqlite)
+        #connection.create_function('IN_BUILDING', 2, reverse_geocoder.is_point_in_polygon)
         cursor = connection.cursor()
 
         info = do_geocoding(cursor, parsed_street, parsed_house_number)
@@ -74,25 +74,33 @@ def main():
         coordinates = info['coordinates']
 
         if args.organizations:
+
             south, north = coordinates[0] - 0.0025, coordinates[0] + 0.0025
             west, east = coordinates[1] - 0.0025, coordinates[1] + 0.0025
 
             cursor.execute(
-                f"SELECT id, name, shop, amenity FROM nodes WHERE (lat BETWEEN {south} AND {north}) AND"
+                f"SELECT id, name, shop, amenity, lat, lon FROM nodes WHERE (lat BETWEEN {south} AND {north}) AND"
                 f"(lon BETWEEN {west} AND {east}) AND (NOT(name IS NULL) OR NOT(shop IS NULL) OR NOT(amenity IS NULL))")
+
+            #cursor.execute(f"SELECT id, name, shop, amenity FROM nodes WHERE IN_BUILDING((lat, lon), )")
             #TODO не забыть про ways/relations
             organizations = cursor.fetchall()
             if len(organizations) == 0:
                 print("Организаций нет")
             else:
+
                 for organization in organizations:
-                    if organization[1] is not None:
-                        print(organization[1], end=' ')
-                    if organization[2] is not None:
-                        print(organization[2], end=' ')
-                    if organization[3] is not None:
-                        print(organization[3], end=' ')
-                    print()
+                    #a = reverse_geocoder.get_objects_binsearch(organization[4], organization[5], city)
+                    #if a is not None and a[0] == street and a[1] == house_number:
+                    if reverse_geocoder.is_point_in_polygon((organization[4], organization[5]), info['nodes']):
+                        #TODO way - организация и внутри него еще есть
+                        if organization[1] is not None:
+                            print(organization[1], end=' ')
+                        if organization[2] is not None:
+                            print(organization[2], end=' ')
+                        if organization[3] is not None:
+                            print(organization[3], end=' ')
+                        print()
 
         if args.json:
             street = street.replace(' ', '_')
