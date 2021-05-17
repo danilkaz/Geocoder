@@ -116,7 +116,7 @@ def main():
             if args.additional:
                 print('\nДополнительная информация OpenStreetMap:')
                 for key, value in info.items():
-                    if key not in ['addr:city' ,'addr:street', 'addr:housenumber', 'coordinates']:
+                    if key not in ['addr:city', 'addr:street', 'addr:housenumber', 'coordinates']:
                         print(f'{key} : {value}')
 
 

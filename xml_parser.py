@@ -190,6 +190,7 @@ class Parser:
                             f"WHERE id IN "
                             f"{'(' + ', '.join(self.refs_rel.keys()) + ')'}")
         ways = self.cursor.fetchall()
+
         for way in ways:
             ids = self.refs_rel[str(way[0])]
             for id in ids:
@@ -198,6 +199,8 @@ class Parser:
                 nodes[-1] = nodes[-1][:-1]
                 for node in nodes:
                     node = node.split(', ')
+                    node[0] = node[0][1:]
+                    node[1] = node[1][:-1]
                     self.relations[id][0].append([float(node[0]), float(node[1])])
 
         for relation in self.relations.values():
