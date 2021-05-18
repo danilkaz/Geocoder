@@ -9,6 +9,7 @@ class Parser:
         self.city = city + '.xml'
         self.connection = sqlite3.connect(os.path.join('db', f'{self.city[:-4]}.db'))
         self.cursor = self.connection.cursor()
+        self.nodes = []
         self.ways = {}
         self.refs_ways = {}
         self.rows_count = 0
@@ -90,7 +91,11 @@ class Parser:
             value = tag.attrib['v']
             keys.append(key)
             values.append(value)
-        self.insert_row('nodes', keys, values)
+        self.nodes.append((keys, values))
+        #self.insert_row('nodes', keys, values)
+
+    def insert_nodes_to_base(self):
+        pass
 
     def parse_way(self, elem) -> None:
         children = list(elem)
@@ -173,7 +178,6 @@ class Parser:
         #TODO подумать что делать когда одно здание пожирает другое
         #TODO некоторые организации не точки, а линии
         #TODO теги организаций - shop, amenity, и еще чето
-        #TODO парсить nodes сразу много
         if len(self.relations) > 100000:
             self.insert_relations_to_base()
 

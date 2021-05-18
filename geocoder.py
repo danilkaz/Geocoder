@@ -77,14 +77,22 @@ def main():
 
             south, north = coordinates[0] - 0.0025, coordinates[0] + 0.0025
             west, east = coordinates[1] - 0.0025, coordinates[1] + 0.0025
-
+    
             cursor.execute(
                 f"SELECT id, name, shop, amenity, lat, lon FROM nodes WHERE (lat BETWEEN {south} AND {north}) AND"
                 f"(lon BETWEEN {west} AND {east}) AND (NOT(name IS NULL) OR NOT(shop IS NULL) OR NOT(amenity IS NULL))")
 
+            organizations = cursor.fetchall()
+            print(len(organizations))
+            cursor.execute(f"SELECT id, name, shop, amenity, coordinateX, coordinateY FROM ways WHERE"
+                           f"(coordinateX BETWEEN {south} AND {north}) AND "
+                           f"(coordinateY BETWEEN {west} AND {east}) AND "
+                           f"(NOT(name IS NULL) OR NOT(shop IS NULL) OR NOT(amenity IS NULL))")
+
             #cursor.execute(f"SELECT id, name, shop, amenity FROM nodes WHERE IN_BUILDING((lat, lon), )")
             #TODO не забыть про ways/relations
-            organizations = cursor.fetchall()
+            organizations = organizations + cursor.fetchall()
+            print(len(organizations))
             if len(organizations) == 0:
                 print("Организаций нет")
             else:

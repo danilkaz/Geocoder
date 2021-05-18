@@ -7,11 +7,11 @@ def get_objects_binsearch(lat, lon, city):
     connection = sqlite3.connect(os.path.join('db', f"{city}.db"))
     cursor = connection.cursor()
 
-    left_border = 0.0001
-    right_border = 0.002
+    left_border = 0.000001
+    right_border = 0.003
     while abs(left_border - right_border) > 0.000001:
         middle = (left_border + right_border) / 2
-        #print(middle)
+        print(middle)
         south, north = lat - middle, lat + middle
         west, east = lon - middle, lon + middle
 
@@ -20,7 +20,7 @@ def get_objects_binsearch(lat, lon, city):
                         f"NOT([addr:housenumber] IS NULL)")
         info = cursor.fetchall()
         if len(info) == 1:
-            #print(info[0][2], info[0][3])
+            print(info[0][2], info[0][3])
             return info[0][2], info[0][3]
         elif len(info) > 1:
             right_border = middle
@@ -43,8 +43,6 @@ def get_objects(lat, lon, city):
         nodes = get_nodes(elem[1])
         nodes = map(lambda x: x.split(', '), nodes)
         nodes = list(map(lambda x: (float(x[0]), float(x[1])), nodes))
-        if 'Горького' in elem[2] and elem[3] == '156':
-            print(nodes)
         if is_point_in_polygon((lat, lon), nodes):
             print(city, elem[2], elem[3])
             break
@@ -52,7 +50,7 @@ def get_objects(lat, lon, city):
         print('я тут')
         south, north = lat - 0.00025, lat + 0.00025
         west, east = lon - 0.00025, lon + 0.00025
-        cursor.execute(
+        cursor.execute(              	
             f"SELECT id, nodes, [addr:street], [addr:housenumber] FROM ways WHERE ([coordinateX] BETWEEN {south} AND {north}) AND"
             f"([coordinateY] BETWEEN {west} AND {east}) AND NOT([addr:street] IS NULL) AND NOT(nodes IS null) AND "
             f"NOT([addr:housenumber] IS NULL)")
