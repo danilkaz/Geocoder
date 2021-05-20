@@ -4,10 +4,12 @@ import os
 from tqdm import tqdm
 from extensions import get_average_point
 
+
 class Parser:
     def __init__(self, city: str) -> None:
         self.city = city + '.xml'
-        self.connection = sqlite3.connect(os.path.join('db', f'{self.city[:-4]}.db'))
+        self.connection = sqlite3.connect(
+            os.path.join('db', f'{self.city[:-4]}.db'))
         self.cursor = self.connection.cursor()
 
         self.rows_count = 0
@@ -20,8 +22,11 @@ class Parser:
 
     def parse(self) -> None:
         self.get_tables()
-        tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
-        bar = tqdm(total=self.rows_count, desc='Формирование базы', ncols=100)
+        tree = xml.etree.ElementTree.iterparse(
+            os.path.join('xml', self.city))
+        bar = tqdm(total=self.rows_count,
+                   desc='Формирование базы',
+                   ncols=100)
         for event, elem in tree:
             bar.update(1)
             if elem.tag == 'node':
@@ -45,7 +50,8 @@ class Parser:
     def get_tables(self) -> None:
         node_tags = set()
         way_tags = set()
-        tree = xml.etree.ElementTree.iterparse(os.path.join('xml', self.city))
+        tree = xml.etree.ElementTree.iterparse(
+            os.path.join('xml', self.city))
         self.rows_count = 0
         bar = tqdm(desc='Обработано уже', unit=' строк')
         for event, elem in tree:
@@ -81,9 +87,16 @@ class Parser:
         for tag in way_tags:
             str_way += f', [{tag}] TEXT'
         self.cursor.execute(f"CREATE TABLE IF NOT EXISTS nodes "
-                            f"(id INTEGER, lat DOUBLE, lon DOUBLE{str_node})")
+                            f"(id INTEGER, "
+                            f"lat DOUBLE, "
+                            f"lon DOUBLE"
+                            f"{str_node})")
         self.cursor.execute(f"CREATE TABLE IF NOT EXISTS ways"
-                            f"(id INTEGER, nodes TEXT, lat DOUBLE, lon DOUBLE{str_way})")
+                            f"(id INTEGER, "
+                            f"nodes TEXT, "
+                            f"lat DOUBLE, "
+                            f"lon DOUBLE"
+                            f"{str_way})")
 
     def parse_node(self, elem) -> None:
         tags = list(elem)
@@ -115,14 +128,16 @@ class Parser:
                 value = child.attrib['v']
                 keys.append(key)
                 values.append(value)
-        self.ways[attr['id']] = ([0]*nodes_count, keys, values)
+        self.ways[attr['id']] = ([0] * nodes_count, keys, values)
         if len(self.ways) > 100000:
             self.insert_ways_to_base()
 
     def insert_ways_to_base(self) -> None:
-        self.cursor.execute(f"SELECT id, lat, lon FROM nodes "
+        refs_str = '(' + ', '.join(self.refs_ways.keys()) + ')'
+        self.cursor.execute(f"SELECT id, lat, lon "
+                            f"FROM nodes "
                             f"WHERE id IN "
-                            f"{'(' + ', '.join(self.refs_ways.keys()) + ')'}")
+                            f"{refs_str}")
         coordinates = self.cursor.fetchall()
         for coord in coordinates:
             ids = self.refs_ways[str(coord[0])]
@@ -134,8 +149,12 @@ class Parser:
             aver_point = get_average_point(way[0])
             if aver_point is None:
                 continue
-            keys = keys[:1] + ['nodes', 'lat', 'lon'] + keys[1:]
-            values = values[:1] + [str(way[0]), aver_point[0], aver_point[1]] + values[1:]
+            keys = keys[:1] + ['nodes',
+                               'lat',
+                               'lon'] + keys[1:]
+            values = values[:1] + [str(way[0]),
+                                   aver_point[0],
+                                   aver_point[1]] + values[1:]
             self.insert_row('ways', keys, values)
 
         self.ways = {}
@@ -155,7 +174,8 @@ class Parser:
                 value = child.attrib['v']
                 keys.append(key)
                 values.append(value)
-            elif child.tag == 'member' and child.attrib['role'] != 'inner':
+            elif child.tag == 'member' \
+                    and child.attrib['role'] != 'inner':
                 ref = child.attrib['ref']
                 count += 1
                 if ref not in self.refs_relations:
@@ -163,17 +183,19 @@ class Parser:
                 self.refs_relations[ref].add((attr['id'], count))
 
         self.relations[attr['id']] = ([], keys, values)
-        #TODO подумать как парсить школы, детские сады и пр.
-        #TODO подумать что делать когда одно здание пожирает другое
-        #TODO некоторые организации не точки, а линии
-        #TODO теги организаций - shop, amenity, и еще чето
+        # TODO подумать как парсить школы, детские сады и пр.
+        # TODO подумать что делать когда одно здание пожирает другое
+        # TODO некоторые организации не точки, а линии
+        # TODO теги организаций - shop, amenity, и еще чето
         if len(self.relations) > 100000:
             self.insert_relations_to_base()
 
     def insert_relations_to_base(self):
-        self.cursor.execute(f"SELECT id, lat, lon FROM nodes "
+        refs_str = '(' + ', '.join(self.refs_relations.keys()) + ')'
+        self.cursor.execute(f"SELECT id, lat, lon "
+                            f"FROM nodes "
                             f"WHERE id IN "
-                            f"{'(' + ', '.join(self.refs_relations.keys()) + ')'}")
+                            f"{refs_str}")
         nodes = self.cursor.fetchall()
 
         indexer = []
@@ -182,9 +204,11 @@ class Parser:
             for id, index in ids:
                 indexer.append((node, id, index))
 
-        self.cursor.execute(f"SELECT id, nodes FROM ways "
+        refs_str = '(' + ', '.join(self.refs_relations.keys()) + ')'
+        self.cursor.execute(f"SELECT id, nodes "
+                            f"FROM ways "
                             f"WHERE id IN "
-                            f"{'(' + ', '.join(self.refs_relations.keys()) + ')'}")
+                            f"{refs_str}")
         ways = self.cursor.fetchall()
 
         for way in ways:
@@ -202,7 +226,8 @@ class Parser:
                 nodes[-1] = nodes[-1][:-1]
                 for node in nodes:
                     node = node.split(', ')
-                    self.relations[id][0].append([float(node[0]), float(node[1])])
+                    self.relations[id][0].append(
+                        [float(node[0]), float(node[1])])
 
         for relation in self.relations.values():
             keys = relation[1]
@@ -213,8 +238,12 @@ class Parser:
             if aver_point is None:
                 continue
 
-            keys = keys[:1] + ['nodes', 'lat', 'lon'] + keys[1:]
-            values = values[:1] + [str(relation[0]), aver_point[0], aver_point[1]] + values[1:]
+            keys = keys[:1] + ['nodes',
+                               'lat',
+                               'lon'] + keys[1:]
+            values = values[:1] + [str(relation[0]),
+                                   aver_point[0],
+                                   aver_point[1]] + values[1:]
 
             self.insert_row('ways', keys, values)
         self.relations = {}

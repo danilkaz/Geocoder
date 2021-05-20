@@ -4,6 +4,7 @@ import os
 from extensions import get_nodes
 from geocoder import Geocoder
 
+
 class ReverseGeocoder:
     @staticmethod
     def get_objects(lat, lon, city):
@@ -13,7 +14,8 @@ class ReverseGeocoder:
         south, north = lat - 0.004, lat + 0.004
         west, east = lon - 0.004, lon + 0.004
 
-        info = ReverseGeocoder.get_info_from_square(cursor, south, north, west, east)
+        info = ReverseGeocoder.get_info_from_square(
+            cursor, south, north, west, east)
         for elem in info:
             nodes = get_nodes(elem[1])
             nodes = map(lambda x: x.split(', '), nodes)
@@ -23,7 +25,8 @@ class ReverseGeocoder:
         else:
             south, north = lat - 0.00025, lat + 0.00025
             west, east = lon - 0.00025, lon + 0.00025
-            info = ReverseGeocoder.get_info_from_square(cursor, south, north, west, east)
+            info = ReverseGeocoder.get_info_from_square(
+                cursor, south, north, west, east)
             result = []
             for elem in info:
                 result.append((elem[2], elem[3]))
@@ -50,7 +53,8 @@ class ReverseGeocoder:
             angle = 0
             for i in range(n):
                 side1 = (polygon[i][0] - point[0], polygon[i][1] - point[1])
-                side2 = (polygon[(i + 1) % n][0] - point[0], polygon[(i + 1) % n][1] - point[1])
+                side2 = (polygon[(i + 1) % n][0] - point[0],
+                         polygon[(i + 1) % n][1] - point[1])
                 angle += math.atan2(ReverseGeocoder.cross(side1, side2),
                                     ReverseGeocoder.dot(side1, side2))
             if abs(abs(angle) - 2 * math.pi) < 0.1:

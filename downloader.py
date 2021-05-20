@@ -4,6 +4,7 @@ import sqlite3
 from tqdm import tqdm
 from extensions import normalize_string_sqlite
 
+
 class Downloader:
     @staticmethod
     def download_city_xml(city):
@@ -12,7 +13,8 @@ class Downloader:
         north = round(coordinates[1], 4)
         west = round(coordinates[2], 4)
         east = round(coordinates[3], 4)
-        url = f"https://overpass-api.de/api/map?bbox={west},{south},{east},{north}"
+        url = f"https://overpass-api.de/api/map?bbox=" \
+              f"{west},{south},{east},{north}"
         print('Делаем запрос')
         response = requests.get(url, stream=True)
         print('Ответ получен. Скачиваем файл')
@@ -29,14 +31,17 @@ class Downloader:
         connection = sqlite3.connect(os.path.join('db', 'cities.db'))
         connection.create_function('NORMALIZE', 1, normalize_string_sqlite)
         cursor = connection.cursor()
-        cursor.execute(f"SELECT south, north, west, east FROM cities "
-                       f"WHERE NORMALIZE(name) IN ('{normalize_string_sqlite(city)}')")
+        cursor.execute(f"SELECT south, north, west, east "
+                       f"FROM cities "
+                       f"WHERE NORMALIZE(name) IN "
+                       f"('{normalize_string_sqlite(city)}')")
         result = cursor.fetchall()
         if len(result) == 0:
             print('Такого города в базе нет.')
             exit(3)
         if len(result) > 1:
-            print('Нашлось больше одного города с таким названием. Уточните запрос.')
+            print('Нашлось больше одного города с таким названием. '
+                  'Уточните запрос.')
             exit(4)
         coordinates = result[0]
         connection.close()

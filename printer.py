@@ -1,6 +1,7 @@
 import json
 import os
 
+
 def get_json_file(city, info, reverse=False):
     street = info['addr:street'].replace(' ', '_')
     house_number = info['addr:housenumber'].replace(' ', '_')
@@ -11,6 +12,7 @@ def get_json_file(city, info, reverse=False):
     with open(os.path.join('json', file_name), 'w', encoding='utf-8') as f:
         json.dump(info, f, ensure_ascii=False)
     print(f'\nФайл сохранен в папку json с именем "{file_name}"')
+
 
 def print_organizations(info):
     print('\nОрганизации в здании:')
@@ -33,5 +35,6 @@ def print_info(city, info, additional=False):
     if additional:
         print('\nДополнительная информация OpenStreetMap:')
         for key, value in info.items():
-            if key not in ['addr:city', 'addr:street', 'addr:housenumber', 'coordinates', 'lat', 'lon']:
+            if key not in ['addr:city', 'addr:street', 'addr:housenumber',
+                           'coordinates', 'lat', 'lon']:
                 print(f'{key} : {value}')

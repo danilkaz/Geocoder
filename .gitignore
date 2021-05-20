@@ -1,4 +1,5 @@
 *
+!tests
 !/db
 !/db/cities.db
 !*.py

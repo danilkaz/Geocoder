@@ -4,8 +4,10 @@ def get_nodes(nodes):
     nodes[-1] = nodes[-1][:-1]
     return nodes
 
+
 def normalize_string_sqlite(string):
     return str(string).lower().replace(' ', '').replace('-', '')
+
 
 def get_average_point(points):
     x = 0
@@ -15,4 +17,3 @@ def get_average_point(points):
         x += point[0]
         y += point[1]
     return round(x / len(points), 7), round(y / len(points), 7)
-

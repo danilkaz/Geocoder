@@ -3,6 +3,7 @@ import os
 from reverse_geocoder import ReverseGeocoder
 from geocoder import Geocoder
 
+
 def get_info_with_organizations(city, info):
     connection = sqlite3.connect(os.path.join('db', f'{city}.db'))
     cursor = connection.cursor()
@@ -25,15 +26,18 @@ def get_info_with_organizations(city, info):
     cursor.execute(f"SELECT * FROM ways WHERE"
                    f"(lat BETWEEN {south} AND {north}) AND "
                    f"(lon BETWEEN {west} AND {east}) AND "
-                   f"(NOT(name IS NULL) OR NOT(shop IS NULL) OR NOT(amenity IS NULL))")
+                   f"(NOT(name IS NULL) OR NOT(shop IS NULL) "
+                   f"OR NOT(amenity IS NULL))")
     organizations += zip_elements(ways_columns, cursor.fetchall())
 
     info['organizations'] = []
 
     for organization in organizations:
-        if ReverseGeocoder.is_point_in_polygon([organization['lat'], organization['lon']], info['nodes']):
+        if ReverseGeocoder.is_point_in_polygon(
+                [organization['lat'], organization['lon']], info['nodes']):
             info['organizations'].append(organization)
     return info
+
 
 def zip_elements(columns, organizations):
     result = []

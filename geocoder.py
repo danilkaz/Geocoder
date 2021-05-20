@@ -2,6 +2,7 @@ import sqlite3
 import os
 from extensions import get_nodes, normalize_string_sqlite, get_average_point
 
+
 class Geocoder:
     @staticmethod
     def do_geocoding(city, street, house_number):
@@ -9,8 +10,10 @@ class Geocoder:
         connection.create_function('NORMALIZE', 1, normalize_string_sqlite)
         cursor = connection.cursor()
         cursor.execute(f"SELECT * FROM ways "
-                       f"WHERE (NORMALIZE([addr:street]) LIKE '%{normalize_string_sqlite(street)}%') "
-                       f"AND (NORMALIZE([addr:housenumber]) = '{normalize_string_sqlite(house_number)}')")
+                       f"WHERE (NORMALIZE([addr:street]) LIKE "
+                       f"'%{normalize_string_sqlite(street)}%') "
+                       f"AND (NORMALIZE([addr:housenumber]) = "
+                       f"'{normalize_string_sqlite(house_number)}')")
         result = cursor.fetchall()
 
         columns = Geocoder.get_columns(cursor, 'ways')
@@ -24,7 +27,8 @@ class Geocoder:
         if len(result) > 1:
             print('Найдено больше одного адреса. Уточните запрос.')
             for i, info in enumerate(result):
-                print(f"{i + 1}) {info['addr:street']} {info['addr:housenumber']}")
+                print(f"{i + 1}) "
+                      f"{info['addr:street']} {info['addr:housenumber']}")
             exit(2)
         connection.close()
         return Geocoder.get_new_info(result[0])

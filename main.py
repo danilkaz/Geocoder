@@ -18,6 +18,7 @@ except ImportError:
     print('Выполните команду: pip install -r requirements.txt')
     exit(10)
 
+
 def main():
     create_directories()
 
@@ -36,15 +37,17 @@ def main():
         parsed_street = args.geocoder[1]
         parsed_house_number = args.geocoder[2]
 
-        city = fix_city_name(parsed_city)
+        city = get_fixed_city_name(parsed_city)
         get_base(city)
 
-        info = Geocoder.do_geocoding(city, parsed_street, parsed_house_number)
+        info = Geocoder.do_geocoding(city, parsed_street,
+                                     parsed_house_number)
         get_answer(args, city, info)
 
     else:
         print('Неверный запрос')
         exit(5)
+
 
 def get_answer(args, city, info):
     if args.organizations:
@@ -56,17 +59,20 @@ def get_answer(args, city, info):
         if args.organizations:
             print_organizations(info)
 
-def fix_city_name(city):
+
+def get_fixed_city_name(city):
     city_conn = sqlite3.connect(os.path.join('db', 'cities.db'))
     city_conn.create_function('NORMALIZE', 1, normalize_string_sqlite)
     city_cursor = city_conn.cursor()
     city_cursor.execute(f"SELECT name FROM cities "
-                        f"WHERE NORMALIZE(name) IN ('{normalize_string_sqlite(city)}')")
+                        f"WHERE NORMALIZE(name) IN "
+                        f"('{normalize_string_sqlite(city)}')")
     city = city_cursor.fetchall()[0][0]
     # TODO: обработать исключение: город не найден
     # TODO: addr:letter добавить
     city_conn.close()
     return city
+
 
 def get_base(city):
     if not is_file_exist(f'{city}.db', os.path.join('db')):
@@ -75,11 +81,14 @@ def get_base(city):
         parser = Parser(city)
         parser.parse()
 
+
 def find_city(lat, lon):
     connection = sqlite3.connect(os.path.join('db', 'cities.db'))
     cursor = connection.cursor()
 
-    cursor.execute(f"SELECT name FROM cities WHERE ({lat} BETWEEN south AND north) AND ({lon} BETWEEN west AND east)")
+    cursor.execute(f"SELECT name FROM cities "
+                   f"WHERE ({lat} BETWEEN south AND north) "
+                   f"AND ({lon} BETWEEN west AND east)")
     info = cursor.fetchall()
     if len(info) == 0:
         print('Данная точка не находится в городе')
@@ -90,11 +99,13 @@ def find_city(lat, lon):
         # TODO подумать как исправить
     return info[0][0]
 
+
 def create_directories():
     if not is_directory_exist('xml', os.path.curdir):
         os.mkdir('xml')
     if not is_directory_exist('json', os.path.curdir):
         os.mkdir('json')
+
 
 def is_file_exist(file_name, path):
     for root, dirs, files in os.walk(path):
@@ -115,16 +126,28 @@ def parse_arguments():
     # TODO перевести ошибки на русский(если возможно)
     # TODO дополнительный аргумент для ситуаций с совпадениями
     group = arg_parser.add_mutually_exclusive_group()
-    group.add_argument('-g', '--geocoder', nargs=3, type=str, required=False,
-                       metavar=('city', 'street', 'house_number'), help='Используйте для прямого геокодинга')
+    group.add_argument('-g', '--geocoder',
+                       nargs=3, type=str,
+                       required=False,
+                       metavar=('city', 'street', 'house_number'),
+                       help='Используйте для прямого геокодинга')
     reverse_group = arg_parser.add_mutually_exclusive_group()
-    reverse_group.add_argument('-r', '--reverse', nargs=2, type=float, required=False,
-                               metavar=('lat', 'lon'), help='Используйте для обратного геокодинга')
-    arg_parser.add_argument('-j', '--json', action='store_true', help='Вывод в файл .json')
-    arg_parser.add_argument('-a', '--additional', action='store_true',
-                           help='Получить дополнительную информации о здании')
-    arg_parser.add_argument('-o', '--organizations', action='store_true',
-                           help='Дополнительно вывести все организации в здании')
+    reverse_group.add_argument('-r', '--reverse',
+                               nargs=2, type=float,
+                               required=False,
+                               metavar=('lat', 'lon'),
+                               help='Используйте для обратного геокодинга')
+    arg_parser.add_argument('-j', '--json',
+                            action='store_true',
+                            help='Вывод в файл .json')
+    arg_parser.add_argument('-a', '--additional',
+                            action='store_true',
+                            help='Получить дополнительную '
+                                 'информацию о здании')
+    arg_parser.add_argument('-o', '--organizations',
+                            action='store_true',
+                            help='Дополнительно вывести '
+                                 'все организации в здании')
     args = arg_parser.parse_args()
     return args
 
