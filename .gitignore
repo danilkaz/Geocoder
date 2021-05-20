@@ -1,9 +1,6 @@
 *
 !/db
 !/db/cities.db
-!geocoder.py
-!xml_parser.py
+!*.py
 !requirements.txt
 !README.md
-!reverse_geocoder.py
-!test.py
