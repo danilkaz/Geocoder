@@ -22,6 +22,9 @@ class Parser:
 
     def parse(self) -> None:
         self.get_tables()
+        if self.rows_count < 100:
+            print('Произошла ошибка. Повторите запрос позднее.')
+            exit(11)
         tree = xml.etree.ElementTree.iterparse(
             os.path.join('xml', self.city))
         bar = tqdm(total=self.rows_count,

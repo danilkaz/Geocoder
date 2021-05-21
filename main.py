@@ -2,10 +2,10 @@ import argparse
 import sqlite3
 import os
 
-from downloader import Downloader
+from downloader import download_city_xml
 from xml_parser import Parser
-from reverse_geocoder import ReverseGeocoder
-from geocoder import Geocoder
+import reverse_geocoder
+import geocoder
 from extensions import normalize_string_sqlite
 from printer import print_info, get_json_file, print_organizations
 from organizations import get_info_with_organizations
@@ -29,7 +29,7 @@ def main():
         lon = float(args.reverse[1])
         city = find_city(lat, lon)
         get_base(city)
-        info = ReverseGeocoder.get_objects(lat, lon, city)
+        info = reverse_geocoder.get_objects(lat, lon, city)
         get_answer(args, city, info)
 
     elif args.geocoder:
@@ -40,7 +40,7 @@ def main():
         city = get_fixed_city_name(parsed_city)
         get_base(city)
 
-        info = Geocoder.do_geocoding(city, parsed_street,
+        info = geocoder.do_geocoding(city, parsed_street,
                                      parsed_house_number)
         get_answer(args, city, info)
 
@@ -77,7 +77,7 @@ def get_fixed_city_name(city):
 def get_base(city):
     if not is_file_exist(f'{city}.db', os.path.join('db')):
         if not is_file_exist(f'{city}.xml', os.path.join('xml')):
-            Downloader.download_city_xml(city)
+            download_city_xml(city)
         parser = Parser(city)
         parser.parse()
 

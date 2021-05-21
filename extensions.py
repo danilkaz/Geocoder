@@ -12,8 +12,10 @@ def normalize_string_sqlite(string):
 def get_average_point(points):
     x = 0
     y = 0
+    if len(points) == 0:
+        return None
     for point in points:
-        point[0], point[1] = float(point[0]), float(point[1])
-        x += point[0]
-        y += point[1]
+        px, py = float(point[0]), float(point[1])
+        x += px
+        y += py
     return round(x / len(points), 7), round(y / len(points), 7)

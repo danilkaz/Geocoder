@@ -36,5 +36,5 @@ def print_info(city, info, additional=False):
         print('\nДополнительная информация OpenStreetMap:')
         for key, value in info.items():
             if key not in ['addr:city', 'addr:street', 'addr:housenumber',
-                           'coordinates', 'lat', 'lon']:
+                           'coordinates', 'lat', 'lon', 'organizations']:
                 print(f'{key} : {value}')
