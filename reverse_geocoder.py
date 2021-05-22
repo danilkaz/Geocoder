@@ -5,7 +5,7 @@ from extensions import get_nodes
 from geocoder import do_geocoding
 
 
-def get_objects(lat, lon, city):
+def do_reverse_geocoding(lat, lon, city):
     connection = sqlite3.connect(os.path.join('db', f"{city}.db"))
     cursor = connection.cursor()
 
@@ -21,6 +21,7 @@ def get_objects(lat, lon, city):
         if is_point_in_polygon((lat, lon), nodes):
             return do_geocoding(city, elem[2], elem[3])
     else:
+        print('я тут')
         south, north = lat - 0.00025, lat + 0.00025
         west, east = lon - 0.00025, lon + 0.00025
         info = get_info_from_square(

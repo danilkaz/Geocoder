@@ -24,6 +24,8 @@ class Parser:
         self.get_tables()
         if self.rows_count < 100:
             print('Произошла ошибка. Повторите запрос позднее.')
+            os.remove(os.path.join('db', self.city[:-4] + '.db'))
+            os.remove(os.path.join('xml', self.city))
             exit(11)
         tree = xml.etree.ElementTree.iterparse(
             os.path.join('xml', self.city))
@@ -101,7 +103,7 @@ class Parser:
                             f"lon DOUBLE"
                             f"{str_way})")
 
-    def parse_node(self, elem) -> None:
+    def parse_node(self, elem):
         tags = list(elem)
         attr = elem.attrib
         keys = ['id', 'lat', 'lon']
@@ -190,6 +192,8 @@ class Parser:
         # TODO подумать что делать когда одно здание пожирает другое
         # TODO некоторые организации не точки, а линии
         # TODO теги организаций - shop, amenity, и еще чето
+        # TODO у некоторых relations может быть type : building, поэтому тоже парсить надо
+        # TODO мб парсить только outline, т.к есть много других ways, они лишние по факту
         if len(self.relations) > 100000:
             self.insert_relations_to_base()
 

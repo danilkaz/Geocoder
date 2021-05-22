@@ -37,10 +37,6 @@ def get_city_coordinates(city):
     if len(result) == 0:
         print('Такого города в базе нет.')
         exit(3)
-    if len(result) > 1:
-        print('Нашлось больше одного города с таким названием. '
-              'Уточните запрос.')
-        exit(4)
     coordinates = result[0]
     connection.close()
     return coordinates

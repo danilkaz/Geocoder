@@ -29,7 +29,7 @@ def main():
         lon = float(args.reverse[1])
         city = find_city(lat, lon)
         get_base(city)
-        info = reverse_geocoder.get_objects(lat, lon, city)
+        info = reverse_geocoder.do_reverse_geocoding(lat, lon, city)
         get_answer(args, city, info)
 
     elif args.geocoder:
