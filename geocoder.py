@@ -52,7 +52,8 @@ def get_new_info(info):
     new_info = dict()
 
     nodes = get_nodes(info['nodes'])
-    points = list(map(lambda p: p.split(', '), nodes))
+    str_points = list(map(lambda p: p.split(', '), nodes))
+    points = list(map(lambda p: [float(p[0]), float(p[1])], str_points))
     average_point = get_average_point(points)
 
     for item in info.items():
