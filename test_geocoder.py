@@ -193,14 +193,13 @@ class TestOrganizations:
                                      '10'
         info = geocoder.do_geocoding(city, street, house_number)
         actual = organizations.get_info_with_organizations(city, info)
-        organizations_expected = {'organizations':
-                                      [{'id': 4679512990,
-                                        'lat': 56.9041403,
-                                        'lon': 59.9490692,
-                                        'amenity': 'bank',
-                                        'name': 'ВУЗ-Банк',
-                                        'name:en': 'VUZBANK',
-                                        'name:ru': 'ВУЗ-Банк'}]}
+        organizations_expected = {'organizations': [{'id': 4679512990,
+                                                     'lat': 56.9041403,
+                                                     'lon': 59.9490692,
+                                                     'amenity': 'bank',
+                                                     'name': 'ВУЗ-Банк',
+                                                     'name:en': 'VUZBANK',
+                                                     'name:ru': 'ВУЗ-Банк'}]}
         expected = {**info, **organizations_expected}
         assert actual == expected
 

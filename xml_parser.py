@@ -184,8 +184,9 @@ class Parser:
                 value = child.attrib['v']
                 keys.append(key)
                 values.append(value)
-            elif child.tag == 'member' and (
-                    child.attrib['role'] == 'outline' or child.attrib['role'] == 'outer'):
+            elif child.tag == 'member' \
+                    and (child.attrib['role'] == 'outline'
+                         or child.attrib['role'] == 'outer'):
                 ref = child.attrib['ref']
                 count += 1
                 if ref not in self.refs_relations:
