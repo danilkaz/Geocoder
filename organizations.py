@@ -26,6 +26,7 @@ def get_info_with_organizations(city, info):
     cursor.execute(f"SELECT * FROM ways WHERE"
                    f"(lat BETWEEN {south} AND {north}) AND "
                    f"(lon BETWEEN {west} AND {east}) AND "
+                   f"(highway IS NULL) AND "
                    f"(NOT(name IS NULL) OR NOT(shop IS NULL) "
                    f"OR NOT(amenity IS NULL))")
     organizations += zip_elements(ways_columns, cursor.fetchall())
