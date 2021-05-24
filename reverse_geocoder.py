@@ -12,8 +12,7 @@ def do_reverse_geocoding(lat, lon, city):
     south, north = lat - 0.004, lat + 0.004
     west, east = lon - 0.004, lon + 0.004
 
-    info = get_info_from_square(
-        cursor, south, north, west, east)
+    info = get_info_from_square(cursor, south, north, west, east)
     for elem in info:
         nodes = get_nodes(elem[1])
         nodes = map(lambda x: x.split(', '), nodes)
@@ -21,11 +20,9 @@ def do_reverse_geocoding(lat, lon, city):
         if is_point_in_polygon((lat, lon), nodes):
             return do_geocoding(city, elem[2], elem[3])
     else:
-        print('я тут')
         south, north = lat - 0.00025, lat + 0.00025
         west, east = lon - 0.00025, lon + 0.00025
-        info = get_info_from_square(
-            cursor, south, north, west, east)
+        info = get_info_from_square(cursor, south, north, west, east)
         result = []
         for elem in info:
             result.append((elem[2], elem[3]))
@@ -51,7 +48,8 @@ def is_point_in_polygon(point, polygon):
     for point in points:
         angle = 0
         for i in range(n):
-            side1 = (polygon[i][0] - point[0], polygon[i][1] - point[1])
+            side1 = (polygon[i][0] - point[0],
+                     polygon[i][1] - point[1])
             side2 = (polygon[(i + 1) % n][0] - point[0],
                      polygon[(i + 1) % n][1] - point[1])
             angle += math.atan2(cross(side1, side2), dot(side1, side2))

@@ -25,8 +25,8 @@ def main():
     args = parse_arguments()
 
     if args.reverse:
-        lat = float(args.reverse[0])
-        lon = float(args.reverse[1])
+        lat = float(args.reverse[0].replace(',', '.'))
+        lon = float(args.reverse[1].replace(',', '.'))
         city = find_city(lat, lon)
         get_base(city)
         info = reverse_geocoder.do_reverse_geocoding(lat, lon, city)
@@ -40,7 +40,8 @@ def main():
         city = get_fixed_city_name(parsed_city)
         get_base(city)
 
-        info = geocoder.do_geocoding(city, parsed_street,
+        info = geocoder.do_geocoding(city,
+                                     parsed_street,
                                      parsed_house_number)
         get_answer(args, city, info)
 
@@ -64,12 +65,16 @@ def get_fixed_city_name(city):
     city_conn = sqlite3.connect(os.path.join('db', 'cities.db'))
     city_conn.create_function('NORMALIZE', 1, normalize_string_sqlite)
     city_cursor = city_conn.cursor()
-    city_cursor.execute(f"SELECT name FROM cities "
-                        f"WHERE NORMALIZE(name) IN "
-                        f"('{normalize_string_sqlite(city)}')")
-    city = city_cursor.fetchall()[0][0]
-    # TODO: обработать исключение: город не найден
-    # TODO: addr:letter добавить
+    city_cursor.execute(
+        f"SELECT name FROM cities "
+        f"WHERE NORMALIZE(name) IN "
+        f"('{normalize_string_sqlite(city)}')"
+    )
+    city_info = city_cursor.fetchall()
+    if len(city_info) == 0:
+        print('Введенный город не найден')
+        exit(12)
+    city = city_info[0][0]
     city_conn.close()
     return city
 
@@ -93,10 +98,6 @@ def find_city(lat, lon):
     if len(info) == 0:
         print('Данная точка не находится в городе')
         exit(6)
-    elif len(info) > 1:
-        print('Точка лежит в пересечении городов')
-        exit(7)
-        # TODO подумать как исправить
     return info[0][0]
 
 
@@ -123,8 +124,6 @@ def is_directory_exist(directory_name, path):
 
 def parse_arguments():
     arg_parser = argparse.ArgumentParser('Геокодер')
-    # TODO перевести ошибки на русский(если возможно)
-    # TODO дополнительный аргумент для ситуаций с совпадениями
     group = arg_parser.add_mutually_exclusive_group()
     group.add_argument('-g', '--geocoder',
                        nargs=3, type=str,
@@ -133,7 +132,7 @@ def parse_arguments():
                        help='Используйте для прямого геокодинга')
     reverse_group = arg_parser.add_mutually_exclusive_group()
     reverse_group.add_argument('-r', '--reverse',
-                               nargs=2, type=float,
+                               nargs=2, type=str,
                                required=False,
                                metavar=('lat', 'lon'),
                                help='Используйте для обратного геокодинга')

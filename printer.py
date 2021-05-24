@@ -9,7 +9,8 @@ def get_json_file(city, info, reverse=False):
     file_name = f'{city}_{street}_{house_number}.json'
     if reverse:
         file_name = f'{lat}_{lon}.json'
-    with open(os.path.join('json', file_name), 'w', encoding='utf-8') as f:
+    with open(os.path.join('json', file_name),
+              'w', encoding='utf-8') as f:
         json.dump(info, f, ensure_ascii=False)
     print(f'\nФайл сохранен в папку json с именем "{file_name}"')
 

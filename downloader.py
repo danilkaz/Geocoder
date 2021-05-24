@@ -40,4 +40,3 @@ def get_city_coordinates(city):
     coordinates = result[0]
     connection.close()
     return coordinates
-

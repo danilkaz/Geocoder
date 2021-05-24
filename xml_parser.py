@@ -85,10 +85,10 @@ class Parser:
             bar.update(1)
         del tree
         bar.close()
-        str_node = ""
+        str_node = ''
         for tag in node_tags:
             str_node += f', [{tag}] TEXT'
-        str_way = ""
+        str_way = ''
         for tag in way_tags:
             str_way += f', [{tag}] TEXT'
         self.cursor.execute(f"CREATE TABLE IF NOT EXISTS nodes "
@@ -160,6 +160,11 @@ class Parser:
             values = values[:1] + [str(way[0]),
                                    aver_point[0],
                                    aver_point[1]] + values[1:]
+            if 'addr:letter' in keys and 'addr:housenumber' in keys:
+                index_housenumber = keys.index('addr:housenumber')
+                index_letter = keys.index('addr:letter')
+                if values[index_letter] not in values[index_housenumber]:
+                    values[index_housenumber] += values[index_letter]
             self.insert_row('ways', keys, values)
 
         self.ways = {}
@@ -179,8 +184,8 @@ class Parser:
                 value = child.attrib['v']
                 keys.append(key)
                 values.append(value)
-            elif child.tag == 'member' \
-                    and child.attrib['role'] != 'inner':
+            elif child.tag == 'member' and (
+                    child.attrib['role'] == 'outline' or child.attrib['role'] == 'outer'):
                 ref = child.attrib['ref']
                 count += 1
                 if ref not in self.refs_relations:
@@ -188,12 +193,6 @@ class Parser:
                 self.refs_relations[ref].add((attr['id'], count))
 
         self.relations[attr['id']] = ([], keys, values)
-        # TODO подумать как парсить школы, детские сады и пр.
-        # TODO подумать что делать когда одно здание пожирает другое
-        # TODO некоторые организации не точки, а линии
-        # TODO теги организаций - shop, amenity, и еще чето
-        # TODO у некоторых relations может быть type : building, поэтому тоже парсить надо
-        # TODO мб парсить только outline, т.к есть много других ways, они лишние по факту
         if len(self.relations) > 100000:
             self.insert_relations_to_base()
 
@@ -239,19 +238,20 @@ class Parser:
         for relation in self.relations.values():
             keys = relation[1]
             values = relation[2]
-
             aver_point = get_average_point(relation[0])
-
             if aver_point is None:
                 continue
-
             keys = keys[:1] + ['nodes',
                                'lat',
                                'lon'] + keys[1:]
             values = values[:1] + [str(relation[0]),
                                    aver_point[0],
                                    aver_point[1]] + values[1:]
-
+            if 'addr:letter' in keys and 'addr:housenumber' in keys:
+                index_housenumber = keys.index('addr:housenumber')
+                index_letter = keys.index('addr:letter')
+                if values[index_letter] not in values[index_housenumber]:
+                    values[index_housenumber] += values[index_letter]
             self.insert_row('ways', keys, values)
         self.relations = {}
         self.refs_relations = {}
@@ -266,8 +266,13 @@ class Parser:
 
     @staticmethod
     def is_building(elem):
+        street_flag = False
+        housenumber_flag = False
         for child in elem:
-            if child.tag == 'tag' and \
-                    'addr:street' in child.attrib['k']:
+            if child.tag == 'tag' and 'addr:street' in child.attrib['k']:
+                street_flag = True
+            if child.tag == 'tag' and 'addr:housenumber' in child.attrib['k']:
+                housenumber_flag = True
+            if street_flag and housenumber_flag:
                 return True
         return False
