@@ -11,7 +11,6 @@ def get_json_file(region, city, info, path, reverse=False):
     file_name = f'{region}_{city}_{street}_{house_number}.json'
     if reverse:
         file_name = f'{lat}_{lon}.json'
-    print(path)
     if path == 'json':
         path = os.path.join(path, file_name)
     splitted_path = os.path.split(os.path.abspath(path))
