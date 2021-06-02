@@ -4,9 +4,7 @@ import extensions
 import direct_geocoder
 import organizations
 import reverse_geocoder
-import geocoder
 import downloader
-import xml_parser
 
 import os
 

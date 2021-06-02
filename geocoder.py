@@ -15,9 +15,9 @@ except ImportError:
     exit(10)
 
 
-def geocoding():
+def geocoding(arguments=None):
     create_directories()
-    args = parse_arguments()
+    args = parse_arguments(arguments)
     if args.reverse:
         lat = float(args.reverse[0].replace(',', '.'))
         lon = float(args.reverse[1].replace(',', '.'))

@@ -1,6 +1,7 @@
 import argparse
 
-def parse_arguments():
+
+def parse_arguments(arguments=None):
     arg_parser = argparse.ArgumentParser('Геокодер')
     group = arg_parser.add_mutually_exclusive_group()
     group.add_argument('-g', '--geocoder',
@@ -27,5 +28,6 @@ def parse_arguments():
                             action='store_true',
                             help='Дополнительно вывести '
                                  'все организации в здании')
-    args = arg_parser.parse_args()
-    return args
+    if arguments is not None:
+        return arg_parser.parse_args(args=arguments)
+    return arg_parser.parse_args()
