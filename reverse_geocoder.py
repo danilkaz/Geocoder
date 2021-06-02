@@ -69,6 +69,7 @@ def get_info_from_square(cursor, south, north, west, east):
     cursor.execute(sql_request, (south, north, west, east))
     return cursor.fetchall()
 
+
 def find_city(lat, lon):
     connection = sqlite3.connect(os.path.join('db', 'cities.db'))
     cursor = connection.cursor()
@@ -81,6 +82,7 @@ def find_city(lat, lon):
         print('Данная точка не находится в городе')
         exit(6)
     return info[0]
+
 
 def dot(point1, point2):
     return point1[0] * point2[0] + point1[1] * point2[1]

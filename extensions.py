@@ -1,6 +1,7 @@
 import os
 import sqlite3
 
+
 def get_nodes(nodes):
     nodes = nodes[1:-1].split('], [')
     nodes[0] = nodes[0][1:]

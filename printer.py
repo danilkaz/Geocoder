@@ -20,9 +20,13 @@ def get_json_file(region, city, info, path, reverse=False):
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(info, f, ensure_ascii=False)
         print(f'\nФайл сохранен по пути: "{path}"')
-    except:
-        print('Ошибка создания файла. Проверьте корректность пути и имени файла.')
+    except PermissionError:
+        print('Ошибка доступа.')
         exit(13)
+    except FileNotFoundError:
+        print('Ошибка создания файла. '
+              'Проверьте корректность пути и имени файла.')
+        exit(14)
 
 
 def print_organizations(info):

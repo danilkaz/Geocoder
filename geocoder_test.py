@@ -242,7 +242,8 @@ class TestExtensions:
 
     def test_get_fixed_city_name_and_region_without_dash(self):
         actual = extensions.get_fixed_city_and_region_name('санктпетербург')
-        assert actual[0] == 'Санкт-Петербург' and actual[1] == 'Санкт-Петербург'
+        assert actual[0] == 'Санкт-Петербург' and \
+               actual[1] == 'Санкт-Петербург'
 
     def test_get_average_point(self):
         points = [(0, 1), (1, 0), (0, 0), (1, 1)]
@@ -263,6 +264,7 @@ class TestExtensions:
     def test_get_nodes_when_empty_list(self):
         s = ''
         assert extensions.get_nodes(s) == ['']
+
 
 def default_setup():
     downloader.get_base('Первоуральск')
