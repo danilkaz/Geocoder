@@ -1,10 +1,10 @@
 import pytest
 
 import extensions
-import geocoder
+import direct_geocoder
 import organizations
 import reverse_geocoder
-import main
+import geocoder
 import downloader
 import xml_parser
 
@@ -12,13 +12,6 @@ import os
 
 
 class TestDownloader:
-    def test_download_city_xml(self):
-        if not main.is_file_exist(f'Первоуральск.xml',
-                                  os.path.join('xml')):
-            downloader.download_city_xml('Первоуральск')
-        assert main.is_file_exist(f'Первоуральск.xml',
-                                  os.path.join('xml'))
-
     def test_get_city_coordinates(self):
         actual = downloader.get_city_coordinates('Ижевск')
         assert actual == (56.7164064, 57.0047551, 53.006558, 53.3913797)
@@ -30,14 +23,14 @@ class TestDownloader:
         assert e.value.code == 3
 
 
-class TestGeocoder:
+class TestDirectGeocoder:
     @staticmethod
     def setup():
         default_setup()
 
     def test_do_geocoding(self):
         city, street, house_number = 'Первоуральск', 'Юбилейная', '10'
-        actual = geocoder.do_geocoding(city, street, house_number)
+        actual = direct_geocoder.do_geocoding(city, street, house_number)
         expected = {'id': '87346929',
                     'building': 'yes',
                     'addr:country': 'RU',
@@ -60,14 +53,14 @@ class TestGeocoder:
                                      'Пушкина', \
                                      'Колотушкина'
         with pytest.raises(SystemExit) as e:
-            geocoder.do_geocoding(city, street, house_number)
+            direct_geocoder.do_geocoding(city, street, house_number)
         assert e.type == SystemExit
         assert e.value.code == 1
 
     def test_do_geocoding_when_more_point_in_city(self):
         city, street, house_number = 'Первоуральск', 'А', '10'
         with pytest.raises(SystemExit) as e:
-            geocoder.do_geocoding(city, street, house_number)
+            direct_geocoder.do_geocoding(city, street, house_number)
         assert e.type == SystemExit
         assert e.value.code == 2
 
@@ -75,7 +68,7 @@ class TestGeocoder:
         info = {'abra': None,
                 'nodes': '[[1, 1], [2, 2], [3, 3]]',
                 'abc': 'hello world!'}
-        actual = geocoder.get_new_info(info)
+        actual = direct_geocoder.get_new_info(info)
         expected = {'nodes': [(1, 1), (2, 2), (3, 3)],
                     'coordinates': (2, 2),
                     'abc': 'hello world!'}
@@ -85,6 +78,18 @@ class TestGeocoder:
 class TestReverseGeocoder:
     def setup(self):
         default_setup()
+
+    def test_find_city(self):
+        lat, lon = 56.846675, 53.241569
+        actual = reverse_geocoder.find_city(lat, lon)
+        assert actual[0] == 'Ижевск' and actual[1] == 'Удмуртия'
+
+    def test_find_city_when_point_not_in_city(self):
+        lat, lon = 57.8907, 53.4099
+        with pytest.raises(SystemExit) as e:
+            reverse_geocoder.find_city(lat, lon)
+        assert e.type == SystemExit
+        assert e.value.code == 6
 
     def test_do_reverse_geocoding(self):
         lat, lon, city = 56.8850854, 60.0040418, 'Первоуральск'
@@ -191,7 +196,7 @@ class TestOrganizations:
         city, street, house_number = 'Первоуральск', \
                                      'проспект Ильича', \
                                      '10'
-        info = geocoder.do_geocoding(city, street, house_number)
+        info = direct_geocoder.do_geocoding(city, street, house_number)
         actual = organizations.get_info_with_organizations(city, info)
         organizations_expected = {'organizations': [{'id': 4679512990,
                                                      'lat': 56.9041403,
@@ -226,6 +231,21 @@ class TestOrganizations:
 
 
 class TestExtensions:
+    def test_download_city_xml(self):
+        if not extensions.is_file_exist(f'Первоуральск.xml',
+                                        os.path.join('xml')):
+            downloader.download_city_xml('Первоуральск')
+        assert extensions.is_file_exist(f'Первоуральск.xml',
+                                        os.path.join('xml'))
+
+    def test_get_fixed_city_name_and_region_with_small_letter(self):
+        actual = extensions.get_fixed_city_and_region_name('ижевск')
+        assert actual[0] == 'Ижевск' and actual[1] == 'Удмуртия'
+
+    def test_get_fixed_city_name_and_region_without_dash(self):
+        actual = extensions.get_fixed_city_and_region_name('санктпетербург')
+        assert actual[0] == 'Санкт-Петербург' and actual[1] == 'Санкт-Петербург'
+
     def test_get_average_point(self):
         points = [(0, 1), (1, 0), (0, 0), (1, 1)]
         assert extensions.get_average_point(points) == (0.5, 0.5)
@@ -246,31 +266,5 @@ class TestExtensions:
         s = ''
         assert extensions.get_nodes(s) == ['']
 
-
-class TestMain:
-    def test_find_city(self):
-        lat, lon = 56.846675, 53.241569
-        actual = main.find_city(lat, lon)
-        expected = 'Ижевск'
-        assert actual == expected
-
-    def test_find_city_when_point_not_in_city(self):
-        lat, lon = 57.8907, 53.4099
-        with pytest.raises(SystemExit) as e:
-            main.find_city(lat, lon)
-        assert e.type == SystemExit
-        assert e.value.code == 6
-
-    def test_get_fixed_city_name_with_small_letter(self):
-        actual = main.get_fixed_city_name('ижевск')
-        expected = 'Ижевск'
-        assert actual == expected
-
-    def test_get_fixed_city_name_without_dash(self):
-        actual = main.get_fixed_city_name('санктпетербург')
-        expected = 'Санкт-Петербург'
-        assert actual == expected
-
-
 def default_setup():
-    main.get_base('Первоуральск')
+    downloader.get_base('Первоуральск')

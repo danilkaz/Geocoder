@@ -2,7 +2,7 @@ import math
 import sqlite3
 import os
 from extensions import get_nodes
-from geocoder import do_geocoding
+from direct_geocoder import do_geocoding
 
 
 def do_reverse_geocoding(lat, lon, city):
@@ -69,6 +69,18 @@ def get_info_from_square(cursor, south, north, west, east):
     cursor.execute(sql_request, (south, north, west, east))
     return cursor.fetchall()
 
+def find_city(lat, lon):
+    connection = sqlite3.connect(os.path.join('db', 'cities.db'))
+    cursor = connection.cursor()
+
+    cursor.execute(f"SELECT city, region FROM cities "
+                   f"WHERE ({lat} BETWEEN south AND north) "
+                   f"AND ({lon} BETWEEN west AND east)")
+    info = cursor.fetchall()
+    if len(info) == 0:
+        print('Данная точка не находится в городе')
+        exit(6)
+    return info[0]
 
 def dot(point1, point2):
     return point1[0] * point2[0] + point1[1] * point2[1]

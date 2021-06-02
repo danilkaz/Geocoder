@@ -2,7 +2,8 @@ import requests
 import os
 import sqlite3
 from tqdm import tqdm
-from extensions import normalize_string_sqlite
+from extensions import normalize_string_sqlite, is_file_exist
+from xml_parser import Parser
 
 
 def download_city_xml(city):
@@ -31,7 +32,7 @@ def get_city_coordinates(city):
     cursor = connection.cursor()
     cursor.execute(f"SELECT south, north, west, east "
                    f"FROM cities "
-                   f"WHERE NORMALIZE(name) IN "
+                   f"WHERE NORMALIZE(city) IN "
                    f"('{normalize_string_sqlite(city)}')")
     result = cursor.fetchall()
     if len(result) == 0:
@@ -40,3 +41,11 @@ def get_city_coordinates(city):
     coordinates = result[0]
     connection.close()
     return coordinates
+
+
+def get_base(city):
+    if not is_file_exist(f'{city}.db', os.path.join('db')):
+        if not is_file_exist(f'{city}.xml', os.path.join('xml')):
+            download_city_xml(city)
+        parser = Parser(city)
+        parser.parse()

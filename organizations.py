@@ -1,7 +1,7 @@
 import sqlite3
 import os
 from reverse_geocoder import is_point_in_polygon
-from geocoder import get_columns
+from direct_geocoder import get_columns
 
 
 def get_info_with_organizations(city, info):
