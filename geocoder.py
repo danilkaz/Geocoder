@@ -27,8 +27,8 @@ def direct_geocoding(city, street, house_number, organizations=False):
 
 
 def reverse_geocoding(lat, lon, organizations=False):
-    lat = float(lat.reverse[0].replace(',', '.'))
-    lon = float(lon.reverse[1].replace(',', '.'))
+    lat = float(lat.replace(',', '.'))
+    lon = float(lon.replace(',', '.'))
     city, region = reverse_geocoder.find_city(lat, lon)
     get_base(city)
     info = reverse_geocoder.do_reverse_geocoding(lat, lon, city)
@@ -40,14 +40,3 @@ def reverse_geocoding(lat, lon, organizations=False):
         info = add_organizations_to_info(city, info)
     return info
 
-
-def get_answer(region, city, info, reverse=False, additional=False, organizations=False, json=False):
-    if organizations:
-        info = get_info_with_organizations(city, info)
-    # if json:
-    #     get_json_file(region, city, info, json, reverse)
-    # else:
-    #     print_info(region, city, info, additional=additional)
-    #     if organizations:
-    #         print_organizations(info)
-    return info
