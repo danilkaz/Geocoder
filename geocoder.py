@@ -33,7 +33,7 @@ def reverse_geocoding(lat, lon, organizations=False):
     get_base(city)
     info = reverse_geocoder.do_reverse_geocoding(lat, lon, city)
     if 'addr:region' not in info:
-        info['region'] = region
+        info['addr:region'] = region
     if 'addr:city' not in info:
         info['addr:city'] = city
     if organizations:

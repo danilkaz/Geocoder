@@ -38,7 +38,7 @@ def main():
         city, street, house_number = args.geocoder
         info = geocoder.direct_geocoding(city, street, house_number, args.organizations)
     elif args.reverse:
-        lat, lon = args.reverse_geocoder
+        lat, lon = args.reverse
         info = geocoder.reverse_geocoding(lat, lon, args.organizations)
     else:
         print('Неверный запрос')
