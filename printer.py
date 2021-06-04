@@ -2,10 +2,11 @@ import json
 import os
 
 
-def get_json_file(region, city, info, path, reverse=False):
+def get_json_file(info, path, reverse=False):
+    region = info['addr:region'].replace(' ', '_')
+    city = info['addr:city'].replace(' ', '_')
     street = info['addr:street'].replace(' ', '_')
     house_number = info['addr:housenumber'].replace(' ', '_')
-    region = region.replace(' ', '_')
     lat, lon = info['coordinates']
 
     file_name = f'{region}_{city}_{street}_{house_number}.json'
@@ -15,7 +16,7 @@ def get_json_file(region, city, info, path, reverse=False):
         path = os.path.join(path, file_name)
     splitted_path = os.path.split(os.path.abspath(path))
     if not os.path.exists(splitted_path[0]):
-        os.mkdir(splitted_path[0])
+        os.makedirs(splitted_path[0])
     try:
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(info, f, ensure_ascii=False)
@@ -37,9 +38,9 @@ def print_organizations(info):
             print(f"{key} : {value}")
 
 
-def print_info(region, city, info, additional=False):
-    if 'addr:city' in info:
-        city = info['addr:city']
+def print_info(info, additional=False):
+    region = info['addr:region']
+    city = info['addr:city']
     street = info['addr:street']
     house_number = info['addr:housenumber']
     lat, lon = info['coordinates']
@@ -50,6 +51,6 @@ def print_info(region, city, info, additional=False):
     if additional:
         print('\nДополнительная информация OpenStreetMap:')
         for key, value in info.items():
-            if key not in ['addr:city', 'addr:street', 'addr:housenumber',
+            if key not in ['addr:region', 'addr:city', 'addr:street', 'addr:housenumber',
                            'coordinates', 'lat', 'lon', 'organizations']:
                 print(f'{key} : {value}')

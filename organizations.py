@@ -4,7 +4,7 @@ from reverse_geocoder import is_point_in_polygon
 from direct_geocoder import get_columns
 
 
-def get_info_with_organizations(city, info):
+def add_organizations_to_info(city, info):
     connection = sqlite3.connect(os.path.join('db', f'{city}.db'))
     cursor = connection.cursor()
 
