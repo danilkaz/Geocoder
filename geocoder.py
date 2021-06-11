@@ -1,8 +1,8 @@
-import reverse_geocoder
 import direct_geocoder
+import reverse_geocoder
+from downloader import get_base
 from extensions import get_fixed_city_and_region_name
 from organizations import add_organizations_to_info
-from downloader import get_base
 
 try:
     import requests
@@ -39,4 +39,3 @@ def reverse_geocoding(lat, lon, organizations=False):
     if organizations:
         info = add_organizations_to_info(city, info)
     return info
-

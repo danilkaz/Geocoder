@@ -1,8 +1,9 @@
 import argparse
 
 import geocoder
-from printer import get_json_file, print_info, print_organizations
 from extensions import create_directories
+from output import get_json_file, print_info, print_organizations
+
 
 def main():
     create_directories()

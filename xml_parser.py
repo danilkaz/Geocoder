@@ -1,7 +1,9 @@
-import xml.etree.ElementTree
-import sqlite3
 import os
+import sqlite3
+import xml.etree.ElementTree
+
 from tqdm import tqdm
+
 from extensions import get_average_point
 
 

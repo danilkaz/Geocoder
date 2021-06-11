@@ -1,5 +1,6 @@
-import sqlite3
 import os
+import sqlite3
+
 from extensions import get_nodes, normalize_string_sqlite, get_average_point
 
 

@@ -1,12 +1,12 @@
+import os
+
 import pytest
 
-import extensions
 import direct_geocoder
+import downloader
+import extensions
 import organizations
 import reverse_geocoder
-import downloader
-
-import os
 
 
 class TestDownloader:
@@ -195,7 +195,7 @@ class TestOrganizations:
                                      'проспект Ильича', \
                                      '10'
         info = direct_geocoder.do_geocoding(city, street, house_number)
-        actual = organizations.get_info_with_organizations(city, info)
+        actual = organizations.add_organizations_to_info(city, info)
         organizations_expected = {'organizations': [{'id': 4679512990,
                                                      'lat': 56.9041403,
                                                      'lon': 59.9490692,

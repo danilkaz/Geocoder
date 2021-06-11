@@ -1,7 +1,9 @@
-import requests
 import os
 import sqlite3
+
+import requests
 from tqdm import tqdm
+
 from extensions import normalize_string_sqlite, is_file_exist
 from xml_parser import Parser
 

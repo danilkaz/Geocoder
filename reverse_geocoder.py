@@ -1,8 +1,9 @@
 import math
-import sqlite3
 import os
-from extensions import get_nodes
+import sqlite3
+
 from direct_geocoder import do_geocoding
+from extensions import get_nodes
 
 
 def do_reverse_geocoding(lat, lon, city):
