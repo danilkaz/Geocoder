@@ -4,11 +4,11 @@ import sqlite3
 import requests
 from tqdm import tqdm
 
-from extensions import normalize_string_sqlite, is_file_exist
+from utils import normalize_string_sqlite, is_file_exist
 from xml_parser import Parser
 
 
-def download_city_xml(city):
+def download_city_xml(city: str) -> None:
     coordinates = get_city_coordinates(city)
     south = round(coordinates[0], 4)
     north = round(coordinates[1], 4)
@@ -28,24 +28,22 @@ def download_city_xml(city):
         bar.close()
 
 
-def get_city_coordinates(city):
-    connection = sqlite3.connect(os.path.join('db', 'cities.db'))
-    connection.create_function('NORMALIZE', 1, normalize_string_sqlite)
-    cursor = connection.cursor()
-    cursor.execute(f"SELECT south, north, west, east "
-                   f"FROM cities "
-                   f"WHERE NORMALIZE(city) IN "
-                   f"('{normalize_string_sqlite(city)}')")
-    result = cursor.fetchall()
-    if len(result) == 0:
-        print('Такого города в базе нет.')
-        exit(3)
-    coordinates = result[0]
-    connection.close()
+def get_city_coordinates(city: str) -> tuple[int]:
+    with sqlite3.connect(os.path.join('db', 'cities.db')) as connection:
+        connection.create_function('NORMALIZE', 1, normalize_string_sqlite)
+        cursor = connection.cursor()
+        cursor.execute(f"SELECT south, north, west, east "
+                       f"FROM cities "
+                       f"WHERE NORMALIZE(city) IN "
+                       f"('{normalize_string_sqlite(city)}')")
+        coordinates = cursor.fetchone()
+        if not coordinates:
+            print('Такого города в базе нет.')
+            exit(3)
     return coordinates
 
 
-def get_base(city):
+def get_base(city: str) -> None:
     if not is_file_exist(f'{city}.db', os.path.join('db')):
         if not is_file_exist(f'{city}.xml', os.path.join('xml')):
             download_city_xml(city)

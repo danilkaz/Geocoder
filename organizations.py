@@ -1,52 +1,43 @@
 import os
 import sqlite3
+from typing import Any
 
-from direct_geocoder import get_columns
+from direct_geocoder import get_table_columns
 from reverse_geocoder import is_point_in_polygon
+from utils import zip_table_columns_with_table_rows, get_average_point
 
 
-def add_organizations_to_info(city, info):
-    connection = sqlite3.connect(os.path.join('db', f'{city}.db'))
-    cursor = connection.cursor()
-
-    lat, lon = info['coordinates']
-
-    south, north = lat - 0.0025, lat + 0.0025
-    west, east = lon - 0.0025, lon + 0.0025
-
-    nodes_columns = get_columns(cursor, 'nodes')
-    cursor.execute(
-        f"SELECT * FROM nodes WHERE "
-        f"(lat BETWEEN {south} AND {north}) AND"
-        f"(lon BETWEEN {west} AND {east}) AND "
-        f"(NOT(name IS NULL) OR NOT(shop IS NULL) "
-        f"OR NOT(amenity IS NULL))")
-    organizations = zip_elements(nodes_columns, cursor.fetchall())
-
-    ways_columns = get_columns(cursor, 'ways')
-    cursor.execute(f"SELECT * FROM ways WHERE"
-                   f"(lat BETWEEN {south} AND {north}) AND "
-                   f"(lon BETWEEN {west} AND {east}) AND "
-                   f"(highway IS NULL) AND "
-                   f"(NOT(name IS NULL) OR NOT(shop IS NULL) "
-                   f"OR NOT(amenity IS NULL))")
-    organizations += zip_elements(ways_columns, cursor.fetchall())
-
-    info['organizations'] = []
-
-    for organization in organizations:
-        if is_point_in_polygon(
-                [organization['lat'], organization['lon']], info['nodes']):
-            info['organizations'].append(organization)
-    return info
-
-
-def zip_elements(columns, organizations):
+def get_organizations_by_address_border(city: str,
+                                        nodes: list[tuple[float, float]]) \
+        -> list[dict[str, Any]]:
     result = []
-    for organization in organizations:
-        d = dict()
-        for elem in zip(columns, organization):
-            if elem[1] is not None:
-                d[elem[0]] = elem[1]
-        result.append(d)
+    radius = 0.0025
+    with sqlite3.connect(os.path.join('db', f'{city}.db')) as connection:
+        cursor = connection.cursor()
+        lat, lon = get_average_point(nodes)
+        south, north = lat - radius, lat + radius
+        west, east = lon - radius, lon + radius
+        request_template = f"SELECT * FROM nodes WHERE " \
+                           f"(lat BETWEEN ? AND ?) AND " \
+                           f"(lon BETWEEN ? AND ?) AND " \
+                           f"(highway IS NULL) AND" \
+                           f"(NOT(name IS NULL) OR " \
+                           f"NOT(shop IS NULL) OR " \
+                           f"NOT(amenity IS NULL))"
+        organizations_within_radius = []
+        nodes_columns = get_table_columns(cursor, 'nodes')
+        ways_columns = get_table_columns(cursor, 'ways')
+        cursor.execute(request_template, (south, north, west, east))
+        organizations_within_radius += zip_table_columns_with_table_rows(
+            nodes_columns,
+            cursor.fetchall())
+        request_template = request_template.replace('nodes', 'ways')
+        cursor.execute(request_template, (south, north, west, east))
+        organizations_within_radius += zip_table_columns_with_table_rows(
+            ways_columns,
+            cursor.fetchall())
+    for organization in organizations_within_radius:
+        if is_point_in_polygon((organization['lat'], organization['lon']),
+                               nodes):
+            result.append(organization)
     return result

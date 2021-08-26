@@ -4,9 +4,9 @@ import pytest
 
 import direct_geocoder
 import downloader
-import extensions
 import organizations
 import reverse_geocoder
+import utils
 
 
 class TestDownloader:
@@ -66,7 +66,7 @@ class TestDirectGeocoder:
         info = {'abra': None,
                 'nodes': '[[1, 1], [2, 2], [3, 3]]',
                 'abc': 'hello world!'}
-        actual = direct_geocoder.get_new_info(info)
+        actual = direct_geocoder.form_geocoder_answer(info)
         expected = {'nodes': [(1, 1), (2, 2), (3, 3)],
                     'coordinates': (2, 2),
                     'abc': 'hello world!'}
@@ -74,7 +74,8 @@ class TestDirectGeocoder:
 
 
 class TestReverseGeocoder:
-    def setup(self):
+    @staticmethod
+    def setup():
         default_setup()
 
     def test_find_city(self):
@@ -195,7 +196,7 @@ class TestOrganizations:
                                      'проспект Ильича', \
                                      '10'
         info = direct_geocoder.do_geocoding(city, street, house_number)
-        actual = organizations.add_organizations_to_info(city, info)
+        actual = organizations.get_organizations_by_address_border(city, info)
         organizations_expected = {'organizations': [{'id': 4679512990,
                                                      'lat': 56.9041403,
                                                      'lon': 59.9490692,
@@ -209,61 +210,64 @@ class TestOrganizations:
     def test_zip_elements(self):
         columns = ['a', 'b']
         organizations_list = [(None, 'abc'), (5, None), ('yy', 'xx')]
-        actual = organizations.zip_elements(columns, organizations_list)
+        actual = organizations.zip_table_columns_with_table_rows(columns,
+                                                                 organizations_list)
         expected = [{'b': 'abc'}, {'a': 5}, {'a': 'yy', 'b': 'xx'}]
         assert actual == expected
 
     def test_zip_elements_when_columns_empty(self):
         columns = []
         organizations_list = [(None, 'abc'), (5, None), ('yy', 'xx')]
-        actual = organizations.zip_elements(columns, organizations_list)
+        actual = organizations.zip_table_columns_with_table_rows(columns,
+                                                                 organizations_list)
         expected = [{}, {}, {}]
         assert actual == expected
 
     def test_zip_elements_when_organizations_empty(self):
         columns = ['a', 'b']
         organizations_list = []
-        actual = organizations.zip_elements(columns, organizations_list)
+        actual = organizations.zip_table_columns_with_table_rows(columns,
+                                                                 organizations_list)
         expected = []
         assert actual == expected
 
 
-class TestExtensions:
+class TestUtils:
     def test_download_city_xml(self):
-        if not extensions.is_file_exist(f'Первоуральск.xml',
-                                        os.path.join('xml')):
+        if not utils.is_file_exist(f'Первоуральск.xml',
+                                   os.path.join('xml')):
             downloader.download_city_xml('Первоуральск')
-        assert extensions.is_file_exist(f'Первоуральск.xml',
-                                        os.path.join('xml'))
+        assert utils.is_file_exist(f'Первоуральск.xml',
+                                   os.path.join('xml'))
 
     def test_get_fixed_city_name_and_region_with_small_letter(self):
-        actual = extensions.get_fixed_city_and_region_name('ижевск')
+        actual = utils.get_fixed_city_and_region_name('ижевск')
         assert actual[0] == 'Ижевск' and actual[1] == 'Удмуртия'
 
     def test_get_fixed_city_name_and_region_without_dash(self):
-        actual = extensions.get_fixed_city_and_region_name('санктпетербург')
+        actual = utils.get_fixed_city_and_region_name('санктпетербург')
         assert actual[0] == 'Санкт-Петербург' and \
                actual[1] == 'Санкт-Петербург'
 
     def test_get_average_point(self):
         points = [(0, 1), (1, 0), (0, 0), (1, 1)]
-        assert extensions.get_average_point(points) == (0.5, 0.5)
+        assert utils.get_average_point(points) == (0.5, 0.5)
 
     def test_get_average_point_when_empty_list(self):
         points = []
-        assert extensions.get_average_point(points) is None
+        assert utils.get_average_point(points) is None
 
     def test_normalize_string_sqlite(self):
         s = 'Abra-ca dabrA'
-        assert extensions.normalize_string_sqlite(s) == 'abracadabra'
+        assert utils.normalize_string_sqlite(s) == 'abracadabra'
 
     def test_get_nodes(self):
         s = '[[1, 1], [2, 2], [3, 3]]'
-        assert extensions.get_nodes(s) == ['1, 1', '2, 2', '3, 3']
+        assert utils.get_nodes(s) == ['1, 1', '2, 2', '3, 3']
 
     def test_get_nodes_when_empty_list(self):
         s = ''
-        assert extensions.get_nodes(s) == ['']
+        assert utils.get_nodes(s) == ['']
 
 
 def default_setup():

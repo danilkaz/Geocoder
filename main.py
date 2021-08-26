@@ -1,13 +1,14 @@
 import argparse
 
 import geocoder
-from extensions import create_directories
-from output import get_json_file, print_info, print_organizations
+from answer import GeocoderAnswer
+from output import output_answer_to_json_file, print_answer
+from utils import create_directories
 
 
-def main():
+def main() -> None:
     create_directories()
-    arg_parser = argparse.ArgumentParser('Геокодер')
+    arg_parser = argparse.ArgumentParser()
     group = arg_parser.add_mutually_exclusive_group()
     group.add_argument('-g', '--geocoder',
                        nargs=3, type=str,
@@ -34,23 +35,27 @@ def main():
                             help='Дополнительно вывести '
                                  'все организации в здании')
     args = arg_parser.parse_args()
-    info = {}
+    answer = GeocoderAnswer()
     if args.geocoder:
         city, street, house_number = args.geocoder
-        info = geocoder.direct_geocoding(city, street,
-                                         house_number, args.organizations)
+        answer = geocoder.direct_geocoding(city,
+                                           street,
+                                           house_number,
+                                           organizations=args.organizations)
     elif args.reverse:
         lat, lon = args.reverse
-        info = geocoder.reverse_geocoding(lat, lon, args.organizations)
+        answer = geocoder.reverse_geocoding(lat,
+                                            lon,
+                                            organizations=args.organizations)
     else:
         print('Неверный запрос')
         exit(5)
     if args.json:
-        get_json_file(info, args.json, reverse=args.reverse)
+        output_answer_to_json_file(answer, args.json, reverse=args.reverse)
     else:
-        print_info(info, additional=args.additional)
-        if args.organizations:
-            print_organizations(info)
+        print_answer(answer,
+                     additional=args.additional,
+                     organizations=args.organizations)
 
 
 if __name__ == '__main__':

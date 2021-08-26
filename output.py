@@ -1,14 +1,18 @@
-import json
 import os
 
+import json
+from answer import GeocoderAnswer, GeocoderAnswerEncoder
 
-def get_json_file(info, path, reverse=False):
-    region = info['addr:region'].replace(' ', '_')
-    city = info['addr:city'].replace(' ', '_')
-    street = info['addr:street'].replace(' ', '_')
-    house_number = info['addr:housenumber'].replace(' ', '_')
-    lat, lon = info['coordinates']
 
+def output_answer_to_json_file(answer: GeocoderAnswer,
+                               path: str,
+                               reverse=False) -> None:
+    region = answer.region.replace(' ', '_')
+    city = answer.city.replace(' ', '_')
+    street = answer.street.replace(' ', '_')
+    house_number = answer.house_number.replace(' ', '_')
+    lat, lon = answer.lat, answer.lon
+    #TODO lat lon поправить
     file_name = f'{region}_{city}_{street}_{house_number}.json'
     if reverse:
         file_name = f'{lat}_{lon}.json'
@@ -19,7 +23,7 @@ def get_json_file(info, path, reverse=False):
         os.makedirs(splitted_path[0])
     try:
         with open(path, 'w', encoding='utf-8') as f:
-            json.dump(info, f, ensure_ascii=False)
+            json.dump(answer, f, ensure_ascii=False, cls=GeocoderAnswerEncoder)
         print(f'\nФайл сохранен по пути: "{path}"')
     except PermissionError:
         print('Ошибка доступа.')
@@ -30,29 +34,26 @@ def get_json_file(info, path, reverse=False):
         exit(14)
 
 
-def print_organizations(info):
-    print('\nОрганизации в здании:')
-    for i, organization in enumerate(info['organizations']):
-        print(i + 1)
-        for key, value in organization.items():
-            print(f"{key} : {value}")
-
-
-def print_info(info, additional=False):
-    region = info['addr:region']
-    city = info['addr:city']
-    street = info['addr:street']
-    house_number = info['addr:housenumber']
-    lat, lon = info['coordinates']
-    print()
-    print(f'Адрес: {region}, {city}, {street}, {house_number}')
+def print_answer(answer: GeocoderAnswer,
+                 additional=False,
+                 organizations=False) -> None:
+    region = answer.region
+    city = answer.city
+    street = answer.street
+    house_number = answer.house_number
+    lat, lon = answer.lat, answer.lon
+    print(f'\nАдрес: {region}, {city}, {street}, {house_number}')
     print(f'Координаты: ({lat}, {lon})')
-
     if additional:
         print('\nДополнительная информация OpenStreetMap:')
-        for key, value in info.items():
-            if key not in ['addr:region', 'addr:city',
-                           'addr:street', 'addr:housenumber',
-                           'coordinates', 'lat', 'lon',
-                           'organizations']:
-                print(f'{key} : {value}')
+        for key, value in answer.additional_information.items():
+            print(f'{key} : {value}')
+    if organizations:
+        print('\nОрганизации в здании:')
+        for i, organization in enumerate(answer.organizations):
+            if str(organization['id']) == \
+                    str(answer.additional_information['id']):
+                continue
+            print(i + 1)
+            for key, value in organization.items():
+                print(f"{key} : {value}")

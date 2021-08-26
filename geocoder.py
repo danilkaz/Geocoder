@@ -1,8 +1,11 @@
 import direct_geocoder
 import reverse_geocoder
+from answer import GeocoderAnswer
 from downloader import get_base
-from extensions import get_fixed_city_and_region_name
-from organizations import add_organizations_to_info
+from organizations import get_organizations_by_address_border
+from utils import (get_fixed_city_and_region_name,
+                   find_city_and_region,
+                   check_and_update_city_and_region)
 
 try:
     import requests
@@ -13,29 +16,32 @@ except ImportError:
     exit(10)
 
 
-def direct_geocoding(city, street, house_number, organizations=False):
+def direct_geocoding(city: str,
+                     street: str,
+                     house_number: str,
+                     organizations: bool = False) -> GeocoderAnswer:
     city, region = get_fixed_city_and_region_name(city)
     get_base(city)
-    info = direct_geocoder.do_geocoding(city, street, house_number)
-    if 'addr:region' not in info:
-        info['addr:region'] = region
-    if 'addr:city' not in info:
-        info['addr:city'] = city
+    answer = direct_geocoder.do_geocoding(city, street, house_number)
     if organizations:
-        info = add_organizations_to_info(city, info)
-    return info
+        answer.organizations = \
+            get_organizations_by_address_border(
+                city, answer.additional_information['nodes'])
+    check_and_update_city_and_region(answer, region, city)
+    return answer
 
 
-def reverse_geocoding(lat, lon, organizations=False):
+def reverse_geocoding(lat: str,
+                      lon: str,
+                      organizations: bool = False) -> GeocoderAnswer:
     lat = float(lat.replace(',', '.'))
     lon = float(lon.replace(',', '.'))
-    city, region = reverse_geocoder.find_city(lat, lon)
+    city, region = find_city_and_region(lat, lon)
     get_base(city)
-    info = reverse_geocoder.do_reverse_geocoding(lat, lon, city)
-    if 'addr:region' not in info:
-        info['addr:region'] = region
-    if 'addr:city' not in info:
-        info['addr:city'] = city
+    answer = reverse_geocoder.do_reverse_geocoding(city, lat, lon)
     if organizations:
-        info = add_organizations_to_info(city, info)
-    return info
+        answer.organizations = \
+            get_organizations_by_address_border(
+                city, answer.additional_information['nodes'])
+    check_and_update_city_and_region(answer, region, city)
+    return answer

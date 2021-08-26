@@ -1,17 +1,18 @@
 import os
 import sqlite3
-import xml.etree.ElementTree
+from xml.etree import ElementTree
+from xml.etree.ElementTree import Element
 
 from tqdm import tqdm
 
-from extensions import get_average_point
+from utils import get_average_point
 
 
 class Parser:
     def __init__(self, city: str) -> None:
-        self.city = city + '.xml'
+        self.city_file = city + '.xml'
         self.connection = sqlite3.connect(
-            os.path.join('db', f'{self.city[:-4]}.db'))
+            os.path.join('db', f'{self.city_file[:-4]}.db'))
         self.cursor = self.connection.cursor()
 
         self.rows_count = 0
@@ -23,14 +24,14 @@ class Parser:
         self.refs_relations = {}
 
     def parse(self) -> None:
-        self.get_tables()
+        self.generate_tables()
         if self.rows_count < 100:
             print('Произошла ошибка. Повторите запрос позднее.')
-            os.remove(os.path.join('db', self.city[:-4] + '.db'))
-            os.remove(os.path.join('xml', self.city))
+            os.remove(os.path.join('db', self.city_file[:-4] + '.db'))
+            os.remove(os.path.join('xml', self.city_file))
             exit(11)
-        tree = xml.etree.ElementTree.iterparse(
-            os.path.join('xml', self.city))
+        tree = ElementTree.iterparse(
+            os.path.join('xml', self.city_file))
         bar = tqdm(total=self.rows_count,
                    desc='Формирование базы',
                    ncols=100)
@@ -54,11 +55,11 @@ class Parser:
         self.connection.close()
         bar.close()
 
-    def get_tables(self) -> None:
+    def generate_tables(self) -> None:
         node_tags = set()
         way_tags = set()
-        tree = xml.etree.ElementTree.iterparse(
-            os.path.join('xml', self.city))
+        tree = ElementTree.iterparse(
+            os.path.join('xml', self.city_file))
         self.rows_count = 0
         bar = tqdm(desc='Обработано уже', unit=' строк')
         for event, elem in tree:
@@ -105,7 +106,7 @@ class Parser:
                             f"lon DOUBLE"
                             f"{str_way})")
 
-    def parse_node(self, elem):
+    def parse_node(self, elem: Element):
         tags = list(elem)
         attr = elem.attrib
         keys = ['id', 'lat', 'lon']
@@ -117,9 +118,9 @@ class Parser:
             values.append(value)
         self.insert_row('nodes', keys, values)
 
-    def parse_way(self, elem) -> None:
-        children = list(elem)
-        attr = elem.attrib
+    def parse_way(self, way: Element) -> None:
+        children = list(way)
+        attr = way.attrib
         keys = ['id']
         values = [attr['id']]
         nodes_count = 0
@@ -172,7 +173,7 @@ class Parser:
         self.ways = {}
         self.refs_ways = {}
 
-    def parse_relation(self, elem) -> None:
+    def parse_relation(self, elem: Element) -> None:
         children = list(elem)
         attr = elem.attrib
         keys = ['id']
