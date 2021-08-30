@@ -3,8 +3,6 @@ import sqlite3
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
-from tqdm import tqdm
-
 from utils import get_average_point
 
 
@@ -24,6 +22,10 @@ class Parser:
         self.refs_relations = {}
 
     def parse(self) -> None:
+        """
+
+        :rtype: object
+        """
         self.generate_tables()
         if self.rows_count < 100:
             print('Произошла ошибка. Повторите запрос позднее.')
@@ -32,11 +34,11 @@ class Parser:
             exit(11)
         tree = ElementTree.iterparse(
             os.path.join('xml', self.city_file))
-        bar = tqdm(total=self.rows_count,
-                   desc='Формирование базы',
-                   ncols=100)
+        # bar = tqdm(total=self.rows_count,
+        #           desc='Формирование базы',
+        #           ncols=100)
         for event, elem in tree:
-            bar.update(1)
+            # bar.update(1)
             if elem.tag == 'node':
                 self.parse_node(elem)
                 elem.clear()
@@ -53,7 +55,7 @@ class Parser:
         del tree
         self.connection.commit()
         self.connection.close()
-        bar.close()
+        # bar.close()
 
     def generate_tables(self) -> None:
         node_tags = set()
@@ -61,7 +63,7 @@ class Parser:
         tree = ElementTree.iterparse(
             os.path.join('xml', self.city_file))
         self.rows_count = 0
-        bar = tqdm(desc='Обработано уже', unit=' строк')
+        # bar = tqdm(desc='Обработано уже', unit=' строк')
         for event, elem in tree:
             self.rows_count += 1
             if elem.tag == 'node':
@@ -85,9 +87,9 @@ class Parser:
                         if key not in ['id', 'nodes']:
                             way_tags.add(key)
                 elem.clear()
-            bar.update(1)
+            # bar.update(1)
         del tree
-        bar.close()
+        # bar.close()
         str_node = ''
         for tag in node_tags:
             str_node += f', [{tag}] TEXT'
@@ -280,3 +282,11 @@ class Parser:
             if street_flag and housenumber_flag:
                 return True
         return False
+
+
+if __name__ == '__main__':
+    from time import time
+
+    start = time()
+    Parser('Санкт-Петербург').parse()
+    print(time() - start)

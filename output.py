@@ -12,7 +12,7 @@ def output_answer_to_json_file(answer: GeocoderAnswer,
     street = answer.street.replace(' ', '_')
     house_number = answer.house_number.replace(' ', '_')
     lat, lon = answer.lat, answer.lon
-    #TODO lat lon поправить
+    # TODO lat lon поправить
     file_name = f'{region}_{city}_{street}_{house_number}.json'
     if reverse:
         file_name = f'{lat}_{lon}.json'

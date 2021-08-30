@@ -37,9 +37,9 @@ def get_city_coordinates(city: str) -> tuple[int]:
                        f"WHERE NORMALIZE(city) IN "
                        f"('{normalize_string_sqlite(city)}')")
         coordinates = cursor.fetchone()
-        if not coordinates:
-            print('Такого города в базе нет.')
-            exit(3)
+    if not coordinates:
+        print('Такого города в базе нет.')
+        exit(3)
     return coordinates
 
 

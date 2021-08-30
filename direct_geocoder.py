@@ -38,7 +38,7 @@ def do_geocoding(city: str,
 
 
 def get_table_columns(cursor: sqlite3.Cursor, table_name: str) -> list[str]:
-    """Получение всех столбцов для оалдыв ошадва оо ацддд одло щво"""
+    """Получение всех столбцов для чего то там =)"""
     cursor.execute(f"PRAGMA table_info({table_name})")
     columns = list(map(lambda x: x[1], cursor.fetchall()))
     return columns
